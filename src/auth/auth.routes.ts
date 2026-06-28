@@ -1,16 +1,25 @@
 import { Router } from 'express';
 import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
+import { LoginUseCase } from '../domains/user/application/login.js';
 import { createMongoUserRepository } from '../domains/user/infrastructure/user.repository.mongo.js';
+import { createMongoRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
 import { BadRequestError } from '../shared/errors/app-error.js';
 
 export interface AuthDependencies {
   registerUserUseCase: RegisterUserUseCase;
+  loginUseCase: LoginUseCase;
+}
+
+function createDefaultDependencies(): AuthDependencies {
+  const userRepository = createMongoUserRepository();
+  return {
+    registerUserUseCase: new RegisterUserUseCase(userRepository),
+    loginUseCase: new LoginUseCase(userRepository, createMongoRefreshTokenRepository()),
+  };
 }
 
 export function createAuthRouter(
-  dependencies: AuthDependencies = {
-    registerUserUseCase: new RegisterUserUseCase(createMongoUserRepository()),
-  }
+  dependencies: AuthDependencies = createDefaultDependencies()
 ): Router {
   const router = Router();
 
@@ -29,6 +38,22 @@ export function createAuthRouter(
       });
 
       res.status(201).json(user);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/login', async (req, res, next) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        throw new BadRequestError('Email and password are required');
+      }
+
+      const tokens = await dependencies.loginUseCase.execute({ email, password });
+
+      res.status(200).json(tokens);
     } catch (error) {
       next(error);
     }
