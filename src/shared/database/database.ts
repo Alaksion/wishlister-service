@@ -9,7 +9,10 @@ export async function connectDatabase(): Promise<Db> {
     return db;
   }
 
-  client = new MongoClient(config.MONGODB_URI);
+  client = new MongoClient(config.MONGODB_URI, {
+    connectTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 5000,
+  });
   await client.connect();
 
   const database = client.db();
