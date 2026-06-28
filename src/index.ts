@@ -1,12 +1,15 @@
-import express from 'express';
+import { createApp } from './app.js';
 
-const app = express();
-const PORT = 3000;
+export async function startServer() {
+  const app = await createApp();
+  const PORT = process.env.PORT ?? 3000;
 
-app.get('/', (req, res) => {
-  res.send('Hello World');
-});
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+startServer().catch((error) => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
