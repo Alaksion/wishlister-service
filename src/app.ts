@@ -3,13 +3,19 @@ import { config } from './shared/config/config.js';
 import { connectDatabase } from './shared/database/database.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
 import { healthRouter } from './health/health.routes.js';
+import { createAuthRouter, type AuthDependencies } from './auth/auth.routes.js';
 
-export async function createApp() {
+export interface AppDependencies {
+  authDependencies?: AuthDependencies;
+}
+
+export async function createApp(dependencies: AppDependencies = {}) {
   const app = express();
 
   app.use(express.json());
 
   app.use('/health', healthRouter);
+  app.use('/auth', createAuthRouter(dependencies.authDependencies));
 
   app.use(errorHandler);
 
