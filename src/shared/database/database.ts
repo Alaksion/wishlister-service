@@ -4,6 +4,17 @@ import { config } from '../config/config.js';
 let client: MongoClient | undefined;
 let db: Db | undefined;
 
+async function setupIndexes(database: Db): Promise<void> {
+  const usersCollection = database.collection('users');
+  await usersCollection.createIndex(
+    { email: 1 },
+    {
+      unique: true,
+      partialFilterExpression: { isActive: true },
+    }
+  );
+}
+
 export async function connectDatabase(): Promise<Db> {
   if (db) {
     return db;
@@ -14,6 +25,7 @@ export async function connectDatabase(): Promise<Db> {
 
   const database = client.db();
   await database.command({ ping: 1 });
+  await setupIndexes(database);
 
   db = database;
   return db;
