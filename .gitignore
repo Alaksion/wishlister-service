@@ -37,4 +37,9 @@ coverage
 # Misc
 .cache
 .temp
-tmp
+tmpdist/
+*.d.ts.map
+vitest.config.d.ts
+vitest.config.d.ts.map
+vitest.config.js
+vitest.config.js.map

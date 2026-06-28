@@ -46,5 +46,7 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "noEmitOnError": false,
-  }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
