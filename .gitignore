@@ -39,4 +39,7 @@ coverage
 .temp
 tmpdist/
 *.d.ts.map
-vitest.config.*
+vitest.config.d.ts
+vitest.config.d.ts.map
+vitest.config.js
+vitest.config.js.map
