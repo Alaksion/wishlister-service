@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { createApp } from '../app.js';
 import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
 import { LoginUseCase } from '../domains/user/application/login.js';
+import { LogoutUseCase } from '../domains/user/application/logout.js';
 import { InMemoryUserRepository } from '../domains/user/infrastructure/user.repository.in-memory.js';
 import { InMemoryRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
 import { config } from '../shared/config/config.js';
@@ -19,8 +20,9 @@ describe('Auth endpoints', () => {
     refreshTokenRepository = new InMemoryRefreshTokenRepository();
     const registerUserUseCase = new RegisterUserUseCase(userRepository);
     const loginUseCase = new LoginUseCase(userRepository, refreshTokenRepository);
+    const logoutUseCase = new LogoutUseCase(refreshTokenRepository);
     app = await createApp({
-      authDependencies: { registerUserUseCase, loginUseCase },
+      authDependencies: { registerUserUseCase, loginUseCase, logoutUseCase },
     });
   });
 
@@ -170,6 +172,47 @@ describe('Auth endpoints', () => {
       expect(storedToken.userId).toBeDefined();
       expect(storedToken.tokenHash).not.toBe(response.body.refreshToken);
       expect(storedToken.expiresAt.getTime()).toBeGreaterThan(Date.now());
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    let refreshToken: string;
+
+    beforeEach(async () => {
+      await request(app).post('/auth/register').send({
+        email: 'alice@example.com',
+        displayName: 'Alice',
+        password: 'Password123!',
+      });
+
+      const response = await request(app).post('/auth/login').send({
+        email: 'alice@example.com',
+        password: 'Password123!',
+      });
+
+      refreshToken = response.body.refreshToken;
+    });
+
+    it('returns 204 and revokes the refresh token', async () => {
+      await request(app).post('/auth/logout').set('x-refresh-token', refreshToken).expect(204);
+
+      const storedTokens = refreshTokenRepository['refreshTokens'];
+      expect(storedTokens).toHaveLength(0);
+    });
+
+    it('returns 401 for invalid refresh token', async () => {
+      const response = await request(app)
+        .post('/auth/logout')
+        .set('x-refresh-token', 'invalid-token')
+        .expect(401);
+
+      expect(response.body.error.message).toBe('Invalid refresh token');
+    });
+
+    it('returns 400 when refresh token is missing', async () => {
+      const response = await request(app).post('/auth/logout').expect(400);
+
+      expect(response.body.error.message).toBe('Refresh token is required');
     });
   });
 });

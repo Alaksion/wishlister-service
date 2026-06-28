@@ -1,5 +1,6 @@
 import { ObjectId, type Collection } from 'mongodb';
 import { getDatabase } from '../../../shared/database/database.js';
+import { verifyRefreshTokenHash } from '../../../shared/tokens/token-service.js';
 import type {
   RefreshToken,
   RefreshTokenRepository,
@@ -30,11 +31,21 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
     };
   }
 
-  async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
-    const doc = (await this.collection.findOne({
-      tokenHash,
-    })) as RefreshTokenDocument | null;
-    return doc ? toRefreshToken(doc) : null;
+  async findByTokenHash(token: string): Promise<RefreshToken | null> {
+    const docs = (await this.collection
+      .find({
+        expiresAt: { $gt: new Date() },
+      })
+      .toArray()) as RefreshTokenDocument[];
+
+    for (const doc of docs) {
+      const matches = await verifyRefreshTokenHash(token, doc.tokenHash);
+      if (matches) {
+        return toRefreshToken(doc);
+      }
+    }
+
+    return null;
   }
 
   async deleteById(id: string): Promise<void> {

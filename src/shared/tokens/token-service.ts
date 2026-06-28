@@ -36,6 +36,10 @@ export async function verifyRefreshTokenHash(token: string, tokenHash: string): 
   return bcrypt.compare(token, tokenHash);
 }
 
+export async function compareRefreshTokenHash(token: string, tokenHash: string): Promise<boolean> {
+  return bcrypt.compare(token, tokenHash);
+}
+
 export function generateAuthTokens(userId: string): AuthTokens {
   const accessToken = generateAccessToken(userId);
   const refreshToken = generateRefreshToken();

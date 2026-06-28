@@ -22,6 +22,18 @@ export class MongoUserRepository implements UserRepository {
     return getDatabase().collection<Omit<User, 'id'>>('users');
   }
 
+  async findById(id: string): Promise<User | null> {
+    let objectId: ObjectId;
+    try {
+      objectId = new ObjectId(id);
+    } catch {
+      return null;
+    }
+
+    const doc = (await this.collection.findOne({ _id: objectId })) as UserDocument | null;
+    return doc ? toUser(doc) : null;
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     const doc = (await this.collection.findOne({
       email: email.toLowerCase(),

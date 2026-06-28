@@ -5,6 +5,10 @@ import type { User } from '../domain/user.js';
 export class InMemoryUserRepository implements UserRepository {
   private users: User[] = [];
 
+  async findById(id: string): Promise<User | null> {
+    return this.users.find((user) => user.id === id) ?? null;
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.users.find((user) => user.email === email.toLowerCase() && user.isActive) ?? null;
   }

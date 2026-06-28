@@ -1,3 +1,4 @@
+import { compareRefreshTokenHash } from '../../../shared/tokens/token-service.js';
 import { ObjectId } from 'mongodb';
 import type {
   RefreshToken,
@@ -17,7 +18,13 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
   }
 
   async findByTokenHash(tokenHash: string): Promise<RefreshToken | null> {
-    return this.refreshTokens.find((token) => token.tokenHash === tokenHash) ?? null;
+    for (const token of this.refreshTokens) {
+      const matches = await compareRefreshTokenHash(tokenHash, token.tokenHash);
+      if (matches) {
+        return token;
+      }
+    }
+    return null;
   }
 
   async deleteById(id: string): Promise<void> {
@@ -29,9 +36,14 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
   }
 
   async deleteAllByUserIdExcept(userId: string, excludedTokenHash: string): Promise<void> {
-    this.refreshTokens = this.refreshTokens.filter(
-      (token) => token.userId !== userId || token.tokenHash === excludedTokenHash
-    );
+    const keptTokens: RefreshToken[] = [];
+    for (const token of this.refreshTokens) {
+      const isExcluded = await compareRefreshTokenHash(excludedTokenHash, token.tokenHash);
+      if (token.userId !== userId || isExcluded) {
+        keptTokens.push(token);
+      }
+    }
+    this.refreshTokens = keptTokens;
   }
 
   clear(): void {
