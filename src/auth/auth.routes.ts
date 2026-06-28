@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
 import { LoginUseCase } from '../domains/user/application/login.js';
+import { LogoutUseCase } from '../domains/user/application/logout.js';
 import { createMongoUserRepository } from '../domains/user/infrastructure/user.repository.mongo.js';
 import { createMongoRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
 import { BadRequestError } from '../shared/errors/app-error.js';
@@ -8,13 +9,16 @@ import { BadRequestError } from '../shared/errors/app-error.js';
 export interface AuthDependencies {
   registerUserUseCase: RegisterUserUseCase;
   loginUseCase: LoginUseCase;
+  logoutUseCase: LogoutUseCase;
 }
 
 function createDefaultDependencies(): AuthDependencies {
   const userRepository = createMongoUserRepository();
+  const refreshTokenRepository = createMongoRefreshTokenRepository();
   return {
     registerUserUseCase: new RegisterUserUseCase(userRepository),
-    loginUseCase: new LoginUseCase(userRepository, createMongoRefreshTokenRepository()),
+    loginUseCase: new LoginUseCase(userRepository, refreshTokenRepository),
+    logoutUseCase: new LogoutUseCase(refreshTokenRepository),
   };
 }
 
@@ -54,6 +58,22 @@ export function createAuthRouter(
       const tokens = await dependencies.loginUseCase.execute({ email, password });
 
       res.status(200).json(tokens);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/logout', async (req, res, next) => {
+    try {
+      const refreshToken = req.headers['x-refresh-token'];
+
+      if (typeof refreshToken !== 'string' || !refreshToken) {
+        throw new BadRequestError('Refresh token is required');
+      }
+
+      await dependencies.logoutUseCase.execute({ refreshToken });
+
+      res.status(204).send();
     } catch (error) {
       next(error);
     }
