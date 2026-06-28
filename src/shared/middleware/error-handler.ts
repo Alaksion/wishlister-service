@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler } from 'express';
+import { ZodError } from 'zod';
 import { AppError } from '../errors/app-error.js';
 import { config } from '../config/config.js';
 
@@ -7,6 +8,17 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(err.statusCode).json({
       error: {
         message: err.message,
+      },
+    });
+    return;
+  }
+
+  if (err instanceof ZodError) {
+    const messages = err.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
+    res.status(400).json({
+      error: {
+        message: 'Validation failed',
+        details: messages,
       },
     });
     return;
