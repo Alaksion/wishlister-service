@@ -12,11 +12,20 @@ import { InMemoryUserRepository } from '../domains/user/infrastructure/user.repo
 import { InMemoryRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
 import { InMemoryWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
 import { createAuthMiddleware } from '../shared/middleware/auth-middleware.js';
-import type { StorageService } from '../shared/storage/storage-service.js';
+import type { StorageService, UploadedObject } from '../shared/storage/storage-service.js';
 import { generateAccessToken } from '../shared/tokens/token-service.js';
 
 class FakeStorageService implements StorageService {
+  uploadedObjects: Array<{ key: string; contentType: string }> = [];
   deletedKeys: string[] = [];
+
+  async uploadObject(key: string, _buffer: Buffer, contentType: string): Promise<UploadedObject> {
+    this.uploadedObjects.push({ key, contentType });
+    return {
+      key,
+      url: `https://example.com/${key}`,
+    };
+  }
 
   async deleteObject(key: string): Promise<void> {
     this.deletedKeys.push(key);
