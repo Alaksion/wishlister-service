@@ -2,13 +2,10 @@ import express from 'express';
 import { config } from './shared/config/config.js';
 import { connectDatabase } from './shared/database/database.js';
 import { errorHandler } from './shared/middleware/error-handler.js';
-import { healthRouter } from './http/health/health.routes.js';
-import { createAuthRouter, type AuthDependencies } from './http/auth/auth.routes.js';
-import { createUsersRouter, type UsersDependencies } from './http/users/users.routes.js';
-import {
-  createWishlistRouter,
-  type WishlistDependencies,
-} from './http/wishlist/wishlist.routes.js';
+import { healthRouter } from './api/health/health.routes.js';
+import { createAuthRouter, type AuthDependencies } from './api/auth/auth.routes.js';
+import { createUsersRouter, type UsersDependencies } from './api/users/users.routes.js';
+import { createWishlistRouter, type WishlistDependencies } from './api/wishlist/wishlist.routes.js';
 
 export interface AppDependencies {
   authDependencies?: AuthDependencies;
