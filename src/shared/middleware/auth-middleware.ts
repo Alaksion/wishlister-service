@@ -10,6 +10,14 @@ declare module 'express-serve-static-core' {
   }
 }
 
+export interface AuthenticatedRequest extends Request {
+  user: User;
+}
+
+export function getAuthenticatedUser(req: Request): User {
+  return (req as AuthenticatedRequest).user;
+}
+
 export function createAuthMiddleware(userRepository: UserRepository) {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
