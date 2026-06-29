@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { z } from 'zod';
 import { CreateWishlistItemUseCase } from '../../domains/wishlist/application/create-wishlist-item.js';
 import {
   ListWishlistItemsUseCase,
@@ -10,6 +9,7 @@ import {
 import { GetWishlistItemUseCase } from '../../domains/wishlist/application/get-wishlist-item.js';
 import { UpdateWishlistItemUseCase } from '../../domains/wishlist/application/update-wishlist-item.js';
 import { DeleteWishlistItemUseCase } from '../../domains/wishlist/application/delete-wishlist-item.js';
+import { itemIdParamSchema } from '../../domains/wishlist/domain/wishlist-item.js';
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import {
   createAuthMiddleware,
@@ -29,10 +29,6 @@ export interface WishlistDependencies {
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
-
-const itemIdParamSchema = z.object({
-  id: z.string().min(1, 'Item id is required'),
-});
 
 function createDefaultDependencies(): WishlistDependencies {
   const userRepository = createMongoUserRepository();
@@ -67,9 +63,10 @@ export function createWishlistRouter(
       try {
         const { id: userId } = getAuthenticatedUser(req);
 
-        const queries = req.validatedQueries as ListWishlistItemsInput;
-
-        const result = await dependencies.listWishlistItemsUseCase.execute(queries, userId);
+        const result = await dependencies.listWishlistItemsUseCase.execute(
+          req.validatedQueries as ListWishlistItemsInput,
+          userId
+        );
 
         res.status(200).json(result);
       } catch (error) {
