@@ -45,6 +45,30 @@ export const createWishlistItemSchema = z.object({
 
 export type CreateWishlistItemInput = z.infer<typeof createWishlistItemSchema>;
 
+export const updateWishlistItemSchema = z.object({
+  title: z
+    .string()
+    .min(1, 'Title is required')
+    .max(200, 'Title must be 200 characters or less')
+    .optional(),
+  description: z
+    .string()
+    .max(2000, 'Description must be 2000 characters or less')
+    .optional()
+    .or(z.literal('')),
+  url: z.string().url('Invalid URL format').optional().or(z.literal('')),
+  price: z.coerce
+    .number()
+    .int('Price must be an integer')
+    .nonnegative('Price cannot be negative')
+    .optional(),
+  currency: z.string().min(3).max(3).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
+  isPurchased: z.boolean().optional(),
+});
+
+export type UpdateWishlistItemInput = z.infer<typeof updateWishlistItemSchema>;
+
 export function createWishlistItem(
   input: CreateWishlistItemInput,
   userId: string,

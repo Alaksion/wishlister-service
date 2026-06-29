@@ -7,14 +7,12 @@ import {
   type ListWishlistItemsInput,
 } from '../../domains/wishlist/application/list-wishlist-items.js';
 import { GetWishlistItemUseCase } from '../../domains/wishlist/application/get-wishlist-item.js';
-import {
-  UpdateWishlistItemUseCase,
-  updateWishlistItemSchema,
-} from '../../domains/wishlist/application/update-wishlist-item.js';
+import { UpdateWishlistItemUseCase } from '../../domains/wishlist/application/update-wishlist-item.js';
 import { DeleteWishlistItemUseCase } from '../../domains/wishlist/application/delete-wishlist-item.js';
 import {
   createWishlistItemSchema,
   itemIdParamSchema,
+  updateWishlistItemSchema,
 } from '../../domains/wishlist/domain/wishlist-item.js';
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import {
@@ -143,7 +141,7 @@ export function createWishlistRouter(
   router.post(
     '/',
     dependencies.authMiddleware,
-    upload.array('images'),
+    upload.array('images', 3),
     validateBody(createWishlistItemSchema),
     async (req, res, next) => {
       try {

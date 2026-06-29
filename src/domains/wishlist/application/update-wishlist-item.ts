@@ -1,31 +1,9 @@
-import { z } from 'zod';
 import type { WishlistItemRepository } from './wishlist-item.repository.js';
-import type { WishlistItem } from '../domain/wishlist-item.js';
+import type { WishlistItem, UpdateWishlistItemInput } from '../domain/wishlist-item.js';
+import { updateWishlistItemSchema } from '../domain/wishlist-item.js';
 import { NotFoundError } from '../../../shared/errors/app-error.js';
 
-export const updateWishlistItemSchema = z.object({
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(200, 'Title must be 200 characters or less')
-    .optional(),
-  description: z
-    .string()
-    .max(2000, 'Description must be 2000 characters or less')
-    .optional()
-    .or(z.literal('')),
-  url: z.string().url('Invalid URL format').optional().or(z.literal('')),
-  price: z.coerce
-    .number()
-    .int('Price must be an integer')
-    .nonnegative('Price cannot be negative')
-    .optional(),
-  currency: z.string().min(3).max(3).optional(),
-  priority: z.enum(['low', 'medium', 'high']).optional(),
-  isPurchased: z.boolean().optional(),
-});
-
-export type UpdateWishlistItemInput = z.infer<typeof updateWishlistItemSchema>;
+export type { UpdateWishlistItemInput } from '../domain/wishlist-item.js';
 
 export class UpdateWishlistItemUseCase {
   constructor(private readonly wishlistItemRepository: WishlistItemRepository) {}
