@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import type { Express } from 'express';
+import type { Express, Request, Response } from 'express';
 import { createApp } from '../../app.js';
 import { RegisterUserUseCase } from '../../domains/user/application/register-user.js';
 import { LoginUseCase } from '../../domains/user/application/login.js';
@@ -16,9 +16,13 @@ import { InMemoryUserRepository } from '../../domains/user/infrastructure/user.r
 import { InMemoryRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
 import { InMemoryWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
 import { createAuthMiddleware } from '../../shared/middleware/auth-middleware.js';
+import { validateParams } from '../../shared/middleware/zod-validation.js';
 import type { StorageService, UploadedObject } from '../../shared/storage/storage-service.js';
 import { generateAccessToken } from '../../shared/tokens/token-service.js';
-import type { WishlistItem } from '../../domains/wishlist/domain/wishlist-item.js';
+import {
+  itemIdParamSchema,
+  type WishlistItem,
+} from '../../domains/wishlist/domain/wishlist-item.js';
 
 class FakeStorageService implements StorageService {
   uploadedObjects: Array<{ key: string; contentType: string }> = [];
@@ -413,6 +417,29 @@ describe('GET /items', () => {
     expect(response.body.items[0].title).toBe('Expensive');
     expect(response.body.items[1].title).toBe('Cheap');
   });
+
+  it('returns 400 for invalid query parameters', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+
+    const response = await request(app)
+      .get('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .query({ limit: 'not-a-number' })
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Validation failed');
+    expect(response.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+      ])
+    );
+  });
 });
 
 describe('GET /items/:id and PATCH /items/:id', () => {
@@ -657,5 +684,24 @@ describe('GET /items/:id and PATCH /items/:id', () => {
 
     expect(response.body.error.message).toBe('Item not found');
     await expect(wishlistItemRepository.findById(item.id)).resolves.toBeDefined();
+  });
+});
+
+describe('route param validation', () => {
+  it('rejects an empty item id with a standardized 400 error', () => {
+    const req = { params: { id: '' } } as unknown as Request;
+    const res = {} as unknown as Response;
+    const next = vi.fn();
+
+    validateParams(itemIdParamSchema)(req, res, next);
+
+    const error = next.mock.calls[0]![0];
+    expect(error.statusCode).toBe(400);
+    expect(error.message).toBe('Validation failed');
+    expect(error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+      ])
+    );
   });
 });

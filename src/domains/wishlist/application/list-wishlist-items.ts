@@ -46,29 +46,27 @@ export class ListWishlistItemsUseCase {
   constructor(private readonly wishlistItemRepository: WishlistItemRepository) {}
 
   async execute(input: ListWishlistItemsInput, userId: string): Promise<ListWishlistItemsResult> {
-    const validated = listWishlistItemsSchema.parse(input);
-
     const options: ListItemsOptions = {
       userId,
-      limit: validated.limit,
-      sortBy: validated.sortBy,
-      sortDirection: validated.sortDirection,
+      limit: input.limit,
+      sortBy: input.sortBy,
+      sortDirection: input.sortDirection,
     };
 
-    if (validated.cursor) {
-      options.cursor = decodeCursor(validated.cursor);
+    if (input.cursor) {
+      options.cursor = decodeCursor(input.cursor);
     }
 
-    if (validated.search) {
-      options.search = validated.search;
+    if (input.search) {
+      options.search = input.search;
     }
 
-    if (validated.priority) {
-      options.priority = validated.priority;
+    if (input.priority) {
+      options.priority = input.priority;
     }
 
-    if (validated.isPurchased !== undefined) {
-      options.isPurchased = validated.isPurchased;
+    if (input.isPurchased !== undefined) {
+      options.isPurchased = input.isPurchased;
     }
 
     const result = await this.wishlistItemRepository.list(options);

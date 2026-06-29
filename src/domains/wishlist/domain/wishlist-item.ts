@@ -24,6 +24,12 @@ export interface WishlistItem {
 
 export const prioritySchema = z.enum(['low', 'medium', 'high']);
 
+export const itemIdParamSchema = z.object({
+  id: z.string().min(1, 'Item id is required'),
+});
+
+export type ItemIdParamInput = z.infer<typeof itemIdParamSchema>;
+
 export const createWishlistItemSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
   description: z.string().max(2000, 'Description must be 2000 characters or less').optional(),
