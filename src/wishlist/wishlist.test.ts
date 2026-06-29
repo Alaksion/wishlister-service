@@ -9,6 +9,8 @@ import { LogoutAllUseCase } from '../domains/user/application/logout-all.js';
 import { RefreshUseCase } from '../domains/user/application/refresh.js';
 import { CreateWishlistItemUseCase } from '../domains/wishlist/application/create-wishlist-item.js';
 import { ListWishlistItemsUseCase } from '../domains/wishlist/application/list-wishlist-items.js';
+import { GetWishlistItemUseCase } from '../domains/wishlist/application/get-wishlist-item.js';
+import { UpdateWishlistItemUseCase } from '../domains/wishlist/application/update-wishlist-item.js';
 import { InMemoryUserRepository } from '../domains/user/infrastructure/user.repository.in-memory.js';
 import { InMemoryRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
 import { InMemoryWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
@@ -65,6 +67,8 @@ describe('POST /items', () => {
       storageService
     );
     const listWishlistItemsUseCase = new ListWishlistItemsUseCase(wishlistItemRepository);
+    const getWishlistItemUseCase = new GetWishlistItemUseCase(wishlistItemRepository);
+    const updateWishlistItemUseCase = new UpdateWishlistItemUseCase(wishlistItemRepository);
 
     app = await createApp({
       authDependencies: {
@@ -77,6 +81,8 @@ describe('POST /items', () => {
       wishlistDependencies: {
         createWishlistItemUseCase,
         listWishlistItemsUseCase,
+        getWishlistItemUseCase,
+        updateWishlistItemUseCase,
         authMiddleware: createAuthMiddleware(userRepository),
       },
     });
@@ -192,6 +198,8 @@ describe('GET /items', () => {
 
     const registerUserUseCase = new RegisterUserUseCase(userRepository);
     const listWishlistItemsUseCase = new ListWishlistItemsUseCase(wishlistItemRepository);
+    const getWishlistItemUseCase = new GetWishlistItemUseCase(wishlistItemRepository);
+    const updateWishlistItemUseCase = new UpdateWishlistItemUseCase(wishlistItemRepository);
 
     app = await createApp({
       authDependencies: {
@@ -204,6 +212,8 @@ describe('GET /items', () => {
       wishlistDependencies: {
         createWishlistItemUseCase: {} as unknown as CreateWishlistItemUseCase,
         listWishlistItemsUseCase,
+        getWishlistItemUseCase,
+        updateWishlistItemUseCase,
         authMiddleware: createAuthMiddleware(userRepository),
       },
     });
@@ -391,5 +401,153 @@ describe('GET /items', () => {
 
     expect(response.body.items[0].title).toBe('Expensive');
     expect(response.body.items[1].title).toBe('Cheap');
+  });
+});
+
+describe('GET /items/:id and PATCH /items/:id', () => {
+  let app: Express;
+  let userRepository: InMemoryUserRepository;
+  let wishlistItemRepository: InMemoryWishlistItemRepository;
+
+  beforeEach(async () => {
+    userRepository = new InMemoryUserRepository();
+    wishlistItemRepository = new InMemoryWishlistItemRepository();
+
+    const registerUserUseCase = new RegisterUserUseCase(userRepository);
+    const getWishlistItemUseCase = new GetWishlistItemUseCase(wishlistItemRepository);
+    const updateWishlistItemUseCase = new UpdateWishlistItemUseCase(wishlistItemRepository);
+
+    app = await createApp({
+      authDependencies: {
+        registerUserUseCase,
+        loginUseCase: {} as unknown as LoginUseCase,
+        logoutUseCase: {} as unknown as LogoutUseCase,
+        logoutAllUseCase: {} as unknown as LogoutAllUseCase,
+        refreshUseCase: {} as unknown as RefreshUseCase,
+      },
+      wishlistDependencies: {
+        createWishlistItemUseCase: {} as unknown as CreateWishlistItemUseCase,
+        listWishlistItemsUseCase: {} as unknown as ListWishlistItemsUseCase,
+        getWishlistItemUseCase,
+        updateWishlistItemUseCase,
+        authMiddleware: createAuthMiddleware(userRepository),
+      },
+    });
+  });
+
+  function createItem(userId: string, overrides: Partial<WishlistItem> = {}): WishlistItem {
+    const now = new Date();
+    return {
+      id: `item-${Math.random().toString(36).slice(2)}`,
+      userId,
+      title: 'Item',
+      currency: 'USD',
+      priority: 'medium',
+      isPurchased: false,
+      images: [],
+      createdAt: now,
+      updatedAt: now,
+      ...overrides,
+    };
+  }
+
+  it('returns the item if owned by the authenticated user', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const userId = registerResponse.body.id;
+    const accessToken = generateAccessToken(userId);
+
+    const item = createItem(userId, { title: 'My Item' });
+    wishlistItemRepository.add(item);
+
+    const response = await request(app)
+      .get(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body.title).toBe('My Item');
+    expect(response.body.createdAt).toBeDefined();
+    expect(response.body.updatedAt).toBeDefined();
+  });
+
+  it('returns 404 for another users item', async () => {
+    const aliceResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const bobResponse = await request(app).post('/auth/register').send({
+      email: 'bob@example.com',
+      displayName: 'Bob',
+      password: 'Password123!',
+    });
+
+    const item = createItem(bobResponse.body.id, { title: 'Bob Item' });
+    wishlistItemRepository.add(item);
+
+    const accessToken = generateAccessToken(aliceResponse.body.id);
+
+    const response = await request(app)
+      .get(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(404);
+
+    expect(response.body.error.message).toBe('Item not found');
+  });
+
+  it('supports partial updates including toggling isPurchased', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const userId = registerResponse.body.id;
+    const accessToken = generateAccessToken(userId);
+
+    const item = createItem(userId, { title: 'Old Title', price: 1000 });
+    wishlistItemRepository.add(item);
+
+    const response = await request(app)
+      .patch(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ title: 'New Title', isPurchased: true })
+      .expect(200);
+
+    expect(response.body.title).toBe('New Title');
+    expect(response.body.price).toBe(1000);
+    expect(response.body.isPurchased).toBe(true);
+  });
+
+  it('returns 404 when updating another users item', async () => {
+    const aliceResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const bobResponse = await request(app).post('/auth/register').send({
+      email: 'bob@example.com',
+      displayName: 'Bob',
+      password: 'Password123!',
+    });
+
+    const item = createItem(bobResponse.body.id);
+    wishlistItemRepository.add(item);
+
+    const accessToken = generateAccessToken(aliceResponse.body.id);
+
+    const response = await request(app)
+      .patch(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ title: 'Hacked' })
+      .expect(404);
+
+    expect(response.body.error.message).toBe('Item not found');
   });
 });
