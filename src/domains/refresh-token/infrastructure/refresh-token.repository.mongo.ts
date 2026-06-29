@@ -56,11 +56,20 @@ export class MongoRefreshTokenRepository implements RefreshTokenRepository {
     await this.collection.deleteMany({ userId });
   }
 
-  async deleteAllByUserIdExcept(userId: string, excludedTokenHash: string): Promise<void> {
-    await this.collection.deleteMany({
-      userId,
-      tokenHash: { $ne: excludedTokenHash },
-    });
+  async deleteAllByUserIdExcept(userId: string, excludedToken: string): Promise<void> {
+    const docs = (await this.collection
+      .find({
+        userId,
+        expiresAt: { $gt: new Date() },
+      })
+      .toArray()) as RefreshTokenDocument[];
+
+    for (const doc of docs) {
+      const isExcluded = await verifyRefreshTokenHash(excludedToken, doc.tokenHash);
+      if (!isExcluded) {
+        await this.collection.deleteOne({ _id: doc._id });
+      }
+    }
   }
 }
 
