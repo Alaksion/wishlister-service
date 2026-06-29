@@ -1,12 +1,12 @@
 import { Router, type Request } from 'express';
-import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
-import { LoginUseCase } from '../domains/user/application/login.js';
-import { LogoutUseCase } from '../domains/user/application/logout.js';
-import { LogoutAllUseCase } from '../domains/user/application/logout-all.js';
-import { RefreshUseCase } from '../domains/user/application/refresh.js';
-import { createMongoUserRepository } from '../domains/user/infrastructure/user.repository.mongo.js';
-import { createMongoRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
-import { BadRequestError } from '../shared/errors/app-error.js';
+import { RegisterUserUseCase } from '../../domains/user/application/register-user.js';
+import { LoginUseCase } from '../../domains/user/application/login.js';
+import { LogoutUseCase } from '../../domains/user/application/logout.js';
+import { LogoutAllUseCase } from '../../domains/user/application/logout-all.js';
+import { RefreshUseCase } from '../../domains/user/application/refresh.js';
+import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
+import { createMongoRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
+import { BadRequestError } from '../../shared/errors/app-error.js';
 
 export interface AuthDependencies {
   registerUserUseCase: RegisterUserUseCase;

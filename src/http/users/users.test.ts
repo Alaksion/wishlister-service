@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
-import { createApp } from '../app.js';
-import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
-import { LoginUseCase } from '../domains/user/application/login.js';
-import { DeactivateUserUseCase } from '../domains/user/application/deactivate-user.js';
-import { LogoutUseCase } from '../domains/user/application/logout.js';
-import { LogoutAllUseCase } from '../domains/user/application/logout-all.js';
-import { RefreshUseCase } from '../domains/user/application/refresh.js';
-import { InMemoryUserRepository } from '../domains/user/infrastructure/user.repository.in-memory.js';
-import { InMemoryRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
-import { InMemoryWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
-import { createAuthMiddleware } from '../shared/middleware/auth-middleware.js';
-import type { StorageService, UploadedObject } from '../shared/storage/storage-service.js';
-import { generateAccessToken } from '../shared/tokens/token-service.js';
+import { createApp } from '../../app.js';
+import { RegisterUserUseCase } from '../../domains/user/application/register-user.js';
+import { LoginUseCase } from '../../domains/user/application/login.js';
+import { DeactivateUserUseCase } from '../../domains/user/application/deactivate-user.js';
+import { LogoutUseCase } from '../../domains/user/application/logout.js';
+import { LogoutAllUseCase } from '../../domains/user/application/logout-all.js';
+import { RefreshUseCase } from '../../domains/user/application/refresh.js';
+import { InMemoryUserRepository } from '../../domains/user/infrastructure/user.repository.in-memory.js';
+import { InMemoryRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
+import { InMemoryWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
+import { createAuthMiddleware } from '../../shared/middleware/auth-middleware.js';
+import type { StorageService, UploadedObject } from '../../shared/storage/storage-service.js';
+import { generateAccessToken } from '../../shared/tokens/token-service.js';
 
 class FakeStorageService implements StorageService {
   uploadedObjects: Array<{ key: string; contentType: string }> = [];

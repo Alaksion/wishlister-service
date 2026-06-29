@@ -1,14 +1,14 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { CreateWishlistItemUseCase } from '../domains/wishlist/application/create-wishlist-item.js';
-import { ListWishlistItemsUseCase } from '../domains/wishlist/application/list-wishlist-items.js';
-import { GetWishlistItemUseCase } from '../domains/wishlist/application/get-wishlist-item.js';
-import { UpdateWishlistItemUseCase } from '../domains/wishlist/application/update-wishlist-item.js';
-import { DeleteWishlistItemUseCase } from '../domains/wishlist/application/delete-wishlist-item.js';
-import { createMongoWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
-import { createAuthMiddleware } from '../shared/middleware/auth-middleware.js';
-import { createStorageService } from '../shared/storage/storage-service.js';
-import { createMongoUserRepository } from '../domains/user/infrastructure/user.repository.mongo.js';
+import { CreateWishlistItemUseCase } from '../../domains/wishlist/application/create-wishlist-item.js';
+import { ListWishlistItemsUseCase } from '../../domains/wishlist/application/list-wishlist-items.js';
+import { GetWishlistItemUseCase } from '../../domains/wishlist/application/get-wishlist-item.js';
+import { UpdateWishlistItemUseCase } from '../../domains/wishlist/application/update-wishlist-item.js';
+import { DeleteWishlistItemUseCase } from '../../domains/wishlist/application/delete-wishlist-item.js';
+import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
+import { createAuthMiddleware } from '../../shared/middleware/auth-middleware.js';
+import { createStorageService } from '../../shared/storage/storage-service.js';
+import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 
 export interface WishlistDependencies {
   createWishlistItemUseCase: CreateWishlistItemUseCase;
