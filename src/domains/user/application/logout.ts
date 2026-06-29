@@ -7,13 +7,13 @@ export class LogoutUseCase {
   constructor(private readonly refreshTokenRepository: RefreshTokenRepository) {}
 
   async execute(input: LogoutInput): Promise<void> {
-    const storedToken = await this.refreshTokenRepository.findByTokenHash(input.refreshToken);
+    const storedToken = await this.refreshTokenRepository.findByTokenHash(input['x-refresh-token']);
 
     if (!storedToken) {
       throw new UnauthorizedError('Invalid refresh token');
     }
 
-    const isValid = await verifyRefreshTokenHash(input.refreshToken, storedToken.tokenHash);
+    const isValid = await verifyRefreshTokenHash(input['x-refresh-token'], storedToken.tokenHash);
     if (!isValid) {
       throw new UnauthorizedError('Invalid refresh token');
     }

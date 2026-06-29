@@ -235,7 +235,7 @@ describe('Auth endpoints', () => {
       expect(response.body.error.message).toBe('Validation failed');
       expect(response.body.error.details).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ path: 'refreshToken', message: expect.any(String) }),
+          expect.objectContaining({ path: 'x-refresh-token', message: expect.any(String) }),
         ])
       );
     });
@@ -295,7 +295,7 @@ describe('Auth endpoints', () => {
       expect(response.body.error.message).toBe('Validation failed');
       expect(response.body.error.details).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ path: 'refreshToken', message: expect.any(String) }),
+          expect.objectContaining({ path: 'x-refresh-token', message: expect.any(String) }),
         ])
       );
     });
@@ -348,7 +348,7 @@ describe('Auth endpoints', () => {
       expect(response.body.error.message).toBe('Validation failed');
       expect(response.body.error.details).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ path: 'refreshToken', message: expect.any(String) }),
+          expect.objectContaining({ path: 'x-refresh-token', message: expect.any(String) }),
         ])
       );
     });

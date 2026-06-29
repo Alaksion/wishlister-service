@@ -83,7 +83,7 @@ export function validateHeader<T>(schema: ZodSchema<T>, headerName: string) {
           ? headerValue[0]
           : undefined;
 
-    const result = schema.safeParse({ refreshToken: value });
+    const result = schema.safeParse({ [headerName]: value });
 
     if (!result.success) {
       next(new ValidationError(formatZodIssues(result.error)));

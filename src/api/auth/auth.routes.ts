@@ -6,7 +6,7 @@ import { LogoutAllUseCase } from '../../domains/user/application/logout-all.js';
 import { RefreshUseCase } from '../../domains/user/application/refresh.js';
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 import { createMongoRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
-import { loginSchema, logoutSchema, registerUserSchema } from '../../domains/user/domain/user.js';
+import { loginSchema, refreshSchema, registerUserSchema } from '../../domains/user/domain/user.js';
 import { validateBody, validateHeader } from '../../shared/middleware/zod-validation.js';
 
 export interface AuthDependencies {
@@ -29,7 +29,7 @@ function createDefaultDependencies(): AuthDependencies {
   };
 }
 
-const refreshTokenHeaderSchema = logoutSchema;
+const refreshTokenHeaderSchema = refreshSchema;
 
 export function createAuthRouter(
   dependencies: AuthDependencies = createDefaultDependencies()
@@ -69,9 +69,13 @@ export function createAuthRouter(
     validateHeader(refreshTokenHeaderSchema, 'x-refresh-token'),
     async (req, res, next) => {
       try {
-        const { refreshToken } = req.validatedHeaders as { refreshToken: string };
+        const { 'x-refresh-token': refreshToken } = req.validatedHeaders as {
+          'x-refresh-token': string;
+        };
 
-        const tokens = await dependencies.refreshUseCase.execute({ refreshToken });
+        const tokens = await dependencies.refreshUseCase.execute({
+          'x-refresh-token': refreshToken,
+        });
 
         res.status(200).json(tokens);
       } catch (error) {
@@ -85,9 +89,11 @@ export function createAuthRouter(
     validateHeader(refreshTokenHeaderSchema, 'x-refresh-token'),
     async (req, res, next) => {
       try {
-        const { refreshToken } = req.validatedHeaders as { refreshToken: string };
+        const { 'x-refresh-token': refreshToken } = req.validatedHeaders as {
+          'x-refresh-token': string;
+        };
 
-        await dependencies.logoutUseCase.execute({ refreshToken });
+        await dependencies.logoutUseCase.execute({ 'x-refresh-token': refreshToken });
 
         res.status(204).send();
       } catch (error) {
@@ -101,9 +107,11 @@ export function createAuthRouter(
     validateHeader(refreshTokenHeaderSchema, 'x-refresh-token'),
     async (req, res, next) => {
       try {
-        const { refreshToken } = req.validatedHeaders as { refreshToken: string };
+        const { 'x-refresh-token': refreshToken } = req.validatedHeaders as {
+          'x-refresh-token': string;
+        };
 
-        await dependencies.logoutAllUseCase.execute({ refreshToken });
+        await dependencies.logoutAllUseCase.execute({ 'x-refresh-token': refreshToken });
 
         res.status(204).send();
       } catch (error) {
