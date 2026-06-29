@@ -3,7 +3,10 @@ import { DeactivateUserUseCase } from '../../domains/user/application/deactivate
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 import { createMongoRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
-import { createAuthMiddleware } from '../../shared/middleware/auth-middleware.js';
+import {
+  createAuthMiddleware,
+  type AuthenticatedRequest,
+} from '../../shared/middleware/auth-middleware.js';
 import { createStorageService } from '../../shared/storage/storage-service.js';
 
 export interface UsersDependencies {
@@ -31,12 +34,7 @@ export function createUsersRouter(
 
   router.delete('/me', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: { message: 'Unauthorized' } });
-        return;
-      }
+      const { id: userId } = (req as AuthenticatedRequest).user;
 
       await dependencies.deactivateUserUseCase.execute(userId);
 
