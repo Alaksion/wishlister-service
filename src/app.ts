@@ -7,9 +7,12 @@ import { createAuthRouter, type AuthDependencies } from './auth/auth.routes.js';
 
 import { createUsersRouter, type UsersDependencies } from './users/users.routes.js';
 
+import { createWishlistRouter, type WishlistDependencies } from './wishlist/wishlist.routes.js';
+
 export interface AppDependencies {
   authDependencies?: AuthDependencies;
   usersDependencies?: UsersDependencies;
+  wishlistDependencies?: WishlistDependencies;
 }
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -20,6 +23,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
   app.use('/health', healthRouter);
   app.use('/auth', createAuthRouter(dependencies.authDependencies));
   app.use('/users', createUsersRouter(dependencies.usersDependencies));
+  app.use('/items', createWishlistRouter(dependencies.wishlistDependencies));
 
   app.use(errorHandler);
 
