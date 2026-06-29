@@ -22,5 +22,6 @@ export interface WishlistItemRepository {
   list(options: ListItemsOptions): Promise<PaginatedWishlistItems>;
   findById(id: string): Promise<WishlistItem | null>;
   update(id: string, item: WishlistItem): Promise<WishlistItem>;
+  delete(id: string): Promise<void>;
   deleteByUserId(userId: string): Promise<void>;
 }
