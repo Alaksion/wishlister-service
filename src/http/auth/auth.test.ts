@@ -2,15 +2,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
 import jwt from 'jsonwebtoken';
-import { createApp } from '../app.js';
-import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
-import { LoginUseCase } from '../domains/user/application/login.js';
-import { LogoutUseCase } from '../domains/user/application/logout.js';
-import { LogoutAllUseCase } from '../domains/user/application/logout-all.js';
-import { RefreshUseCase } from '../domains/user/application/refresh.js';
-import { InMemoryUserRepository } from '../domains/user/infrastructure/user.repository.in-memory.js';
-import { InMemoryRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
-import { config } from '../shared/config/config.js';
+import { createApp } from '../../app.js';
+import { RegisterUserUseCase } from '../../domains/user/application/register-user.js';
+import { LoginUseCase } from '../../domains/user/application/login.js';
+import { LogoutUseCase } from '../../domains/user/application/logout.js';
+import { LogoutAllUseCase } from '../../domains/user/application/logout-all.js';
+import { RefreshUseCase } from '../../domains/user/application/refresh.js';
+import { InMemoryUserRepository } from '../../domains/user/infrastructure/user.repository.in-memory.js';
+import { InMemoryRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
+import { config } from '../../shared/config/config.js';
 
 describe('Auth endpoints', () => {
   let app: Express;
