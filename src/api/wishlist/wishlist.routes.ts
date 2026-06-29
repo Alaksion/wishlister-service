@@ -9,13 +9,21 @@ import {
 import { GetWishlistItemUseCase } from '../../domains/wishlist/application/get-wishlist-item.js';
 import { UpdateWishlistItemUseCase } from '../../domains/wishlist/application/update-wishlist-item.js';
 import { DeleteWishlistItemUseCase } from '../../domains/wishlist/application/delete-wishlist-item.js';
-import { itemIdParamSchema } from '../../domains/wishlist/domain/wishlist-item.js';
+import {
+  createWishlistItemSchema,
+  itemIdParamSchema,
+  updateWishlistItemSchema,
+} from '../../domains/wishlist/domain/wishlist-item.js';
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import {
   createAuthMiddleware,
   getAuthenticatedUser,
 } from '../../shared/middleware/auth-middleware.js';
-import { validateQuery, validateParams } from '../../shared/middleware/zod-validation.js';
+import {
+  validateBody,
+  validateQuery,
+  validateParams,
+} from '../../shared/middleware/zod-validation.js';
 import { createStorageService } from '../../shared/storage/storage-service.js';
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 
@@ -93,21 +101,24 @@ export function createWishlistRouter(
     }
   );
 
-  router.patch('/:id', dependencies.authMiddleware, async (req, res, next) => {
-    try {
-      const { id: userId } = getAuthenticatedUser(req);
+  router.patch(
+    '/:id',
+    dependencies.authMiddleware,
+    validateParams(itemIdParamSchema),
+    validateBody(updateWishlistItemSchema),
+    async (req, res, next) => {
+      try {
+        const { id: userId } = getAuthenticatedUser(req);
+        const { id: itemId } = req.params as { id: string };
 
-      const item = await dependencies.updateWishlistItemUseCase.execute(
-        req.params.id as string,
-        userId,
-        req.body
-      );
+        const item = await dependencies.updateWishlistItemUseCase.execute(itemId, userId, req.body);
 
-      res.status(200).json(item);
-    } catch (error) {
-      next(error);
+        res.status(200).json(item);
+      } catch (error) {
+        next(error);
+      }
     }
-  });
+  );
 
   router.delete(
     '/:id',
@@ -131,6 +142,7 @@ export function createWishlistRouter(
     '/',
     dependencies.authMiddleware,
     upload.array('images', 3),
+    validateBody(createWishlistItemSchema),
     async (req, res, next) => {
       try {
         const { id: userId } = getAuthenticatedUser(req);
@@ -145,18 +157,7 @@ export function createWishlistRouter(
             }))
           : [];
 
-        const item = await dependencies.createWishlistItemUseCase.execute(
-          {
-            title: req.body.title,
-            description: req.body.description,
-            url: req.body.url,
-            price: req.body.price,
-            currency: req.body.currency,
-            priority: req.body.priority,
-          },
-          userId,
-          images
-        );
+        const item = await dependencies.createWishlistItemUseCase.execute(req.body, userId, images);
 
         res.status(201).json(item);
       } catch (error) {

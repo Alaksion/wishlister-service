@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import sharp from 'sharp';
-import { z } from 'zod';
 import type { WishlistItemRepository } from '../application/wishlist-item.repository.js';
 import type { StorageService } from '../../../shared/storage/storage-service.js';
 import {
@@ -21,10 +20,6 @@ export interface ImageFile {
   mimetype: string;
   size: number;
 }
-
-export const createWishlistItemSchemaInput = createWishlistItemSchema.extend({
-  images: z.array(z.any()).max(MAX_IMAGES, `Maximum ${MAX_IMAGES} images allowed`).default([]),
-});
 
 export interface CreateWishlistItemUseCaseResult {
   id: string;

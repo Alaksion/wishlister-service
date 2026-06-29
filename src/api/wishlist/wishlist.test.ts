@@ -190,6 +190,30 @@ describe('POST /items', () => {
     expect(response.body.error.message).toBe('Validation failed');
   });
 
+  it('returns 400 for an invalid create payload', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'frank@example.com',
+      displayName: 'Frank',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Thing')
+      .field('priority', 'invalid-priority')
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Validation failed');
+    expect(response.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+      ])
+    );
+  });
+
   it('returns 401 without authorization header', async () => {
     const response = await request(app).post('/items').field('title', 'Thing').expect(401);
 
@@ -592,6 +616,33 @@ describe('GET /items/:id and PATCH /items/:id', () => {
       .expect(404);
 
     expect(response.body.error.message).toBe('Item not found');
+  });
+
+  it('returns 400 for an invalid update payload', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const userId = registerResponse.body.id;
+    const accessToken = generateAccessToken(userId);
+
+    const item = createItem(userId, { title: 'Old Title' });
+    wishlistItemRepository.add(item);
+
+    const response = await request(app)
+      .patch(`/items/${item.id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ url: 'not-a-url' })
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Validation failed');
+    expect(response.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+      ])
+    );
   });
 
   it('deletes the item and its images if owned by the authenticated user', async () => {
