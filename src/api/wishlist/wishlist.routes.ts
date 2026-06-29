@@ -143,7 +143,7 @@ export function createWishlistRouter(
   router.post(
     '/',
     dependencies.authMiddleware,
-    upload.array('images', 3),
+    upload.array('images'),
     validateBody(createWishlistItemSchema),
     async (req, res, next) => {
       try {
