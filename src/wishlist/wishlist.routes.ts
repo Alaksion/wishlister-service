@@ -2,6 +2,8 @@ import { Router } from 'express';
 import multer from 'multer';
 import { CreateWishlistItemUseCase } from '../domains/wishlist/application/create-wishlist-item.js';
 import { ListWishlistItemsUseCase } from '../domains/wishlist/application/list-wishlist-items.js';
+import { GetWishlistItemUseCase } from '../domains/wishlist/application/get-wishlist-item.js';
+import { UpdateWishlistItemUseCase } from '../domains/wishlist/application/update-wishlist-item.js';
 import { createMongoWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import { createAuthMiddleware } from '../shared/middleware/auth-middleware.js';
 import { createStorageService } from '../shared/storage/storage-service.js';
@@ -10,6 +12,8 @@ import { createMongoUserRepository } from '../domains/user/infrastructure/user.r
 export interface WishlistDependencies {
   createWishlistItemUseCase: CreateWishlistItemUseCase;
   listWishlistItemsUseCase: ListWishlistItemsUseCase;
+  getWishlistItemUseCase: GetWishlistItemUseCase;
+  updateWishlistItemUseCase: UpdateWishlistItemUseCase;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
 }
 
@@ -24,6 +28,8 @@ function createDefaultDependencies(): WishlistDependencies {
       createStorageService()
     ),
     listWishlistItemsUseCase: new ListWishlistItemsUseCase(wishlistItemRepository),
+    getWishlistItemUseCase: new GetWishlistItemUseCase(wishlistItemRepository),
+    updateWishlistItemUseCase: new UpdateWishlistItemUseCase(wishlistItemRepository),
     authMiddleware: createAuthMiddleware(userRepository),
   };
 }
@@ -57,6 +63,47 @@ export function createWishlistRouter(
       );
 
       res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/:id', dependencies.authMiddleware, async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: { message: 'Unauthorized' } });
+        return;
+      }
+
+      const item = await dependencies.getWishlistItemUseCase.execute(
+        req.params.id as string,
+        userId
+      );
+
+      res.status(200).json(item);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch('/:id', dependencies.authMiddleware, async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: { message: 'Unauthorized' } });
+        return;
+      }
+
+      const item = await dependencies.updateWishlistItemUseCase.execute(
+        req.params.id as string,
+        userId,
+        req.body
+      );
+
+      res.status(200).json(item);
     } catch (error) {
       next(error);
     }

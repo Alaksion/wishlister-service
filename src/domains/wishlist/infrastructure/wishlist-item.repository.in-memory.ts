@@ -73,6 +73,15 @@ export class InMemoryWishlistItemRepository implements WishlistItemRepository {
     return this.items.find((item) => item.id === id) ?? null;
   }
 
+  async update(id: string, item: WishlistItem): Promise<WishlistItem> {
+    const index = this.items.findIndex((existingItem) => existingItem.id === id);
+    if (index === -1) {
+      throw new Error('Item not found');
+    }
+    this.items[index] = item;
+    return item;
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     this.items = this.items.filter((item) => item.userId !== userId);
   }
