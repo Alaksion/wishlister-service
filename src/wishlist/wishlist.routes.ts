@@ -4,6 +4,7 @@ import { CreateWishlistItemUseCase } from '../domains/wishlist/application/creat
 import { ListWishlistItemsUseCase } from '../domains/wishlist/application/list-wishlist-items.js';
 import { GetWishlistItemUseCase } from '../domains/wishlist/application/get-wishlist-item.js';
 import { UpdateWishlistItemUseCase } from '../domains/wishlist/application/update-wishlist-item.js';
+import { DeleteWishlistItemUseCase } from '../domains/wishlist/application/delete-wishlist-item.js';
 import { createMongoWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import { createAuthMiddleware } from '../shared/middleware/auth-middleware.js';
 import { createStorageService } from '../shared/storage/storage-service.js';
@@ -14,6 +15,7 @@ export interface WishlistDependencies {
   listWishlistItemsUseCase: ListWishlistItemsUseCase;
   getWishlistItemUseCase: GetWishlistItemUseCase;
   updateWishlistItemUseCase: UpdateWishlistItemUseCase;
+  deleteWishlistItemUseCase: DeleteWishlistItemUseCase;
   authMiddleware: ReturnType<typeof createAuthMiddleware>;
 }
 
@@ -22,14 +24,19 @@ const upload = multer({ storage: multer.memoryStorage() });
 function createDefaultDependencies(): WishlistDependencies {
   const userRepository = createMongoUserRepository();
   const wishlistItemRepository = createMongoWishlistItemRepository();
+  const storageService = createStorageService();
   return {
     createWishlistItemUseCase: new CreateWishlistItemUseCase(
       wishlistItemRepository,
-      createStorageService()
+      storageService
     ),
     listWishlistItemsUseCase: new ListWishlistItemsUseCase(wishlistItemRepository),
     getWishlistItemUseCase: new GetWishlistItemUseCase(wishlistItemRepository),
     updateWishlistItemUseCase: new UpdateWishlistItemUseCase(wishlistItemRepository),
+    deleteWishlistItemUseCase: new DeleteWishlistItemUseCase(
+      wishlistItemRepository,
+      storageService
+    ),
     authMiddleware: createAuthMiddleware(userRepository),
   };
 }
@@ -104,6 +111,23 @@ export function createWishlistRouter(
       );
 
       res.status(200).json(item);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/:id', dependencies.authMiddleware, async (req, res, next) => {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: { message: 'Unauthorized' } });
+        return;
+      }
+
+      await dependencies.deleteWishlistItemUseCase.execute(req.params.id as string, userId);
+
+      res.status(204).send();
     } catch (error) {
       next(error);
     }
