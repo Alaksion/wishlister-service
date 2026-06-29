@@ -1,9 +1,27 @@
 import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../errors/app-error.js';
+import { ValidationError, type ValidationErrorDetail } from './zod-validation.js';
 import { config } from '../config/config.js';
 
+function formatZodIssues(error: ZodError): ValidationErrorDetail[] {
+  return error.issues.map((issue) => ({
+    path: issue.path.join('.'),
+    message: issue.message,
+  }));
+}
+
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  if (err instanceof ValidationError) {
+    res.status(err.statusCode).json({
+      error: {
+        message: err.message,
+        details: err.details,
+      },
+    });
+    return;
+  }
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       error: {
@@ -14,11 +32,10 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   }
 
   if (err instanceof ZodError) {
-    const messages = err.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
     res.status(400).json({
       error: {
         message: 'Validation failed',
-        details: messages,
+        details: formatZodIssues(err),
       },
     });
     return;
