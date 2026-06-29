@@ -1,13 +1,11 @@
 import crypto from 'crypto';
 import sharp from 'sharp';
-import { z } from 'zod';
 import type { WishlistItemRepository } from '../application/wishlist-item.repository.js';
 import type { StorageService } from '../../../shared/storage/storage-service.js';
 import {
   type CreateWishlistItemInput,
   type Image,
   createWishlistItem,
-  createWishlistItemSchema,
 } from '../domain/wishlist-item.js';
 import { BadRequestError } from '../../../shared/errors/app-error.js';
 
@@ -21,10 +19,6 @@ export interface ImageFile {
   mimetype: string;
   size: number;
 }
-
-export const createWishlistItemSchemaInput = createWishlistItemSchema.extend({
-  images: z.array(z.any()).max(MAX_IMAGES, `Maximum ${MAX_IMAGES} images allowed`).default([]),
-});
 
 export interface CreateWishlistItemUseCaseResult {
   id: string;
@@ -52,8 +46,6 @@ export class CreateWishlistItemUseCase {
     userId: string,
     images: ImageFile[] = []
   ): Promise<CreateWishlistItemUseCaseResult> {
-    const validated = createWishlistItemSchema.parse(input);
-
     if (images.length > MAX_IMAGES) {
       throw new BadRequestError(`Maximum ${MAX_IMAGES} images allowed`);
     }
@@ -78,7 +70,7 @@ export class CreateWishlistItemUseCase {
       });
     }
 
-    const itemToCreate = createWishlistItem(validated, userId, processedImages);
+    const itemToCreate = createWishlistItem(input, userId, processedImages);
     const createdItem = await this.wishlistItemRepository.create(itemToCreate);
 
     return createdItem;
