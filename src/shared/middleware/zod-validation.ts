@@ -66,3 +66,34 @@ export function validateParams<T>(schema: ZodSchema<T>) {
     next();
   };
 }
+
+declare module 'express-serve-static-core' {
+  interface Request {
+    validatedHeaders?: Record<string, unknown>;
+  }
+}
+
+export function validateHeader<T>(schema: ZodSchema<T>, headerName: string) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const headerValue = req.headers[headerName];
+    const value =
+      typeof headerValue === 'string'
+        ? headerValue
+        : Array.isArray(headerValue)
+          ? headerValue[0]
+          : undefined;
+
+    const result = schema.safeParse({ [headerName]: value });
+
+    if (!result.success) {
+      next(new ValidationError(formatZodIssues(result.error)));
+      return;
+    }
+
+    req.validatedHeaders = {
+      ...req.validatedHeaders,
+      ...result.data,
+    };
+    next();
+  };
+}

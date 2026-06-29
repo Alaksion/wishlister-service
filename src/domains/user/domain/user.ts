@@ -19,7 +19,23 @@ export const registerUserSchema = z.object({
     ),
 });
 
+export const loginSchema = z.object({
+  email: z.string().email('Invalid email address').min(1, 'Email is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const logoutSchema = z.object({
+  'x-refresh-token': z.string().min(1, 'Refresh token is required'),
+});
+
+export const logoutAllSchema = logoutSchema;
+export const refreshSchema = logoutSchema;
+
 export type RegisterUserInput = z.infer<typeof registerUserSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type LogoutInput = z.infer<typeof logoutSchema>;
+export type LogoutAllInput = z.infer<typeof logoutAllSchema>;
+export type RefreshInput = z.infer<typeof refreshSchema>;
 
 export interface User {
   id: string;
