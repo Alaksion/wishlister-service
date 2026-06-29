@@ -66,3 +66,24 @@ export function validateParams<T>(schema: ZodSchema<T>) {
     next();
   };
 }
+
+export function validateHeader<T>(schema: ZodSchema<T>, headerName: string) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const headerValue = req.headers[headerName];
+    const value =
+      typeof headerValue === 'string'
+        ? headerValue
+        : Array.isArray(headerValue)
+          ? headerValue[0]
+          : undefined;
+
+    const result = schema.safeParse({ refreshToken: value });
+
+    if (!result.success) {
+      next(new ValidationError(formatZodIssues(result.error)));
+      return;
+    }
+
+    next();
+  };
+}
