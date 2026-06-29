@@ -116,6 +116,14 @@ export class MongoWishlistItemRepository implements WishlistItemRepository {
     return doc ? toWishlistItem(doc) : null;
   }
 
+  async update(id: string, item: WishlistItem): Promise<WishlistItem> {
+    const objectId = new ObjectId(id);
+    const { id: _itemId, ...itemWithoutId } = item;
+    void _itemId;
+    await this.collection.replaceOne({ _id: objectId }, itemWithoutId);
+    return item;
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     await this.collection.deleteMany({ userId });
   }
