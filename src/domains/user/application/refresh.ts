@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import type { RefreshTokenRepository } from '../../refresh-token/application/refresh-token.repository.js';
 import { UnauthorizedError } from '../../../shared/errors/app-error.js';
 import {
@@ -7,12 +6,7 @@ import {
   hashRefreshToken,
   verifyRefreshTokenHash,
 } from '../../../shared/tokens/token-service.js';
-
-export const refreshSchema = z.object({
-  refreshToken: z.string().min(1),
-});
-
-export type RefreshInput = z.infer<typeof refreshSchema>;
+import type { RefreshInput } from '../domain/user.js';
 
 export interface RefreshResult {
   accessToken: string;
@@ -23,9 +17,7 @@ export class RefreshUseCase {
   constructor(private readonly refreshTokenRepository: RefreshTokenRepository) {}
 
   async execute(input: RefreshInput): Promise<RefreshResult> {
-    const validated = refreshSchema.parse(input);
-
-    const storedToken = await this.refreshTokenRepository.findByTokenHash(validated.refreshToken);
+    const storedToken = await this.refreshTokenRepository.findByTokenHash(input.refreshToken);
 
     if (!storedToken) {
       throw new UnauthorizedError('Invalid refresh token');
@@ -35,7 +27,7 @@ export class RefreshUseCase {
       throw new UnauthorizedError('Refresh token expired');
     }
 
-    const isValid = await verifyRefreshTokenHash(validated.refreshToken, storedToken.tokenHash);
+    const isValid = await verifyRefreshTokenHash(input.refreshToken, storedToken.tokenHash);
     if (!isValid) {
       throw new UnauthorizedError('Invalid refresh token');
     }

@@ -1,17 +1,10 @@
 import bcrypt from 'bcrypt';
-import { z } from 'zod';
 import type { UserRepository } from './user.repository.js';
 import { UnauthorizedError } from '../../../shared/errors/app-error.js';
 import { normalizeEmail } from '../domain/user.js';
 import type { RefreshTokenRepository } from '../../refresh-token/application/refresh-token.repository.js';
 import { generateAuthTokens, hashRefreshToken } from '../../../shared/tokens/token-service.js';
-
-export const loginSchema = z.object({
-  email: z.string().email().min(1),
-  password: z.string().min(1),
-});
-
-export type LoginInput = z.infer<typeof loginSchema>;
+import type { LoginInput } from '../domain/user.js';
 
 export interface LoginResult {
   accessToken: string;
@@ -25,15 +18,13 @@ export class LoginUseCase {
   ) {}
 
   async execute(input: LoginInput): Promise<LoginResult> {
-    const validated = loginSchema.parse(input);
-    const normalizedEmail = normalizeEmail(validated.email);
-
+    const normalizedEmail = normalizeEmail(input.email);
     const user = await this.userRepository.findByEmail(normalizedEmail);
     if (!user) {
       throw new UnauthorizedError('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(validated.password, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(input.password, user.passwordHash);
     if (!isPasswordValid) {
       throw new UnauthorizedError('Invalid credentials');
     }
