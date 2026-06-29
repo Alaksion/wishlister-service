@@ -35,6 +35,8 @@ export class UpdateWishlistItemUseCase {
     userId: string,
     input: UpdateWishlistItemInput
   ): Promise<WishlistItem> {
+    const validated = updateWishlistItemSchema.parse(input);
+
     const existingItem = await this.wishlistItemRepository.findById(itemId);
 
     if (!existingItem || existingItem.userId !== userId) {
@@ -46,12 +48,12 @@ export class UpdateWishlistItemUseCase {
       updatedAt: new Date(),
     };
 
-    if (input.title !== undefined) {
-      updatedItem.title = input.title.trim();
+    if (validated.title !== undefined) {
+      updatedItem.title = validated.title.trim();
     }
 
-    if (input.description !== undefined) {
-      const trimmed = input.description.trim();
+    if (validated.description !== undefined) {
+      const trimmed = validated.description.trim();
       if (trimmed) {
         updatedItem.description = trimmed;
       } else {
@@ -59,8 +61,8 @@ export class UpdateWishlistItemUseCase {
       }
     }
 
-    if (input.url !== undefined) {
-      const trimmed = input.url.trim();
+    if (validated.url !== undefined) {
+      const trimmed = validated.url.trim();
       if (trimmed) {
         updatedItem.url = trimmed;
       } else {
@@ -68,20 +70,20 @@ export class UpdateWishlistItemUseCase {
       }
     }
 
-    if (input.price !== undefined) {
-      updatedItem.price = input.price;
+    if (validated.price !== undefined) {
+      updatedItem.price = validated.price;
     }
 
-    if (input.currency !== undefined) {
-      updatedItem.currency = input.currency.toUpperCase();
+    if (validated.currency !== undefined) {
+      updatedItem.currency = validated.currency.toUpperCase();
     }
 
-    if (input.priority !== undefined) {
-      updatedItem.priority = input.priority;
+    if (validated.priority !== undefined) {
+      updatedItem.priority = validated.priority;
     }
 
-    if (input.isPurchased !== undefined) {
-      updatedItem.isPurchased = input.isPurchased;
+    if (validated.isPurchased !== undefined) {
+      updatedItem.isPurchased = validated.isPurchased;
     }
 
     return this.wishlistItemRepository.update(itemId, updatedItem);

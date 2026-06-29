@@ -6,6 +6,7 @@ import {
   type CreateWishlistItemInput,
   type Image,
   createWishlistItem,
+  createWishlistItemSchema,
 } from '../domain/wishlist-item.js';
 import { BadRequestError } from '../../../shared/errors/app-error.js';
 
@@ -46,6 +47,8 @@ export class CreateWishlistItemUseCase {
     userId: string,
     images: ImageFile[] = []
   ): Promise<CreateWishlistItemUseCaseResult> {
+    const validated = createWishlistItemSchema.parse(input);
+
     if (images.length > MAX_IMAGES) {
       throw new BadRequestError(`Maximum ${MAX_IMAGES} images allowed`);
     }
@@ -70,7 +73,7 @@ export class CreateWishlistItemUseCase {
       });
     }
 
-    const itemToCreate = createWishlistItem(input, userId, processedImages);
+    const itemToCreate = createWishlistItem(validated, userId, processedImages);
     const createdItem = await this.wishlistItemRepository.create(itemToCreate);
 
     return createdItem;
