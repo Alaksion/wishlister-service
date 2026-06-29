@@ -35,10 +35,10 @@ export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
     this.refreshTokens = this.refreshTokens.filter((token) => token.userId !== userId);
   }
 
-  async deleteAllByUserIdExcept(userId: string, excludedTokenHash: string): Promise<void> {
+  async deleteAllByUserIdExcept(userId: string, excludedToken: string): Promise<void> {
     const keptTokens: RefreshToken[] = [];
     for (const token of this.refreshTokens) {
-      const isExcluded = await compareRefreshTokenHash(excludedTokenHash, token.tokenHash);
+      const isExcluded = await compareRefreshTokenHash(excludedToken, token.tokenHash);
       if (token.userId !== userId || isExcluded) {
         keptTokens.push(token);
       }
