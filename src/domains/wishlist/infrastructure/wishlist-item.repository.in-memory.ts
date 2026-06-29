@@ -82,6 +82,10 @@ export class InMemoryWishlistItemRepository implements WishlistItemRepository {
     return item;
   }
 
+  async delete(id: string): Promise<void> {
+    this.items = this.items.filter((existingItem) => existingItem.id !== id);
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     this.items = this.items.filter((item) => item.userId !== userId);
   }

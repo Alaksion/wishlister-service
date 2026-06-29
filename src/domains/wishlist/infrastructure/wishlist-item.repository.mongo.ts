@@ -124,6 +124,17 @@ export class MongoWishlistItemRepository implements WishlistItemRepository {
     return item;
   }
 
+  async delete(id: string): Promise<void> {
+    let objectId: ObjectId;
+    try {
+      objectId = new ObjectId(id);
+    } catch {
+      return;
+    }
+
+    await this.collection.deleteOne({ _id: objectId });
+  }
+
   async deleteByUserId(userId: string): Promise<void> {
     await this.collection.deleteMany({ userId });
   }
