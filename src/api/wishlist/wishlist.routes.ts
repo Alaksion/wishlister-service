@@ -6,7 +6,10 @@ import { GetWishlistItemUseCase } from '../../domains/wishlist/application/get-w
 import { UpdateWishlistItemUseCase } from '../../domains/wishlist/application/update-wishlist-item.js';
 import { DeleteWishlistItemUseCase } from '../../domains/wishlist/application/delete-wishlist-item.js';
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
-import { createAuthMiddleware } from '../../shared/middleware/auth-middleware.js';
+import {
+  createAuthMiddleware,
+  type AuthenticatedRequest,
+} from '../../shared/middleware/auth-middleware.js';
 import { createStorageService } from '../../shared/storage/storage-service.js';
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 
@@ -48,12 +51,7 @@ export function createWishlistRouter(
 
   router.get('/', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: { message: 'Unauthorized' } });
-        return;
-      }
+      const { id: userId } = (req as AuthenticatedRequest).user;
 
       const result = await dependencies.listWishlistItemsUseCase.execute(
         {
@@ -77,12 +75,7 @@ export function createWishlistRouter(
 
   router.get('/:id', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: { message: 'Unauthorized' } });
-        return;
-      }
+      const { id: userId } = (req as AuthenticatedRequest).user;
 
       const item = await dependencies.getWishlistItemUseCase.execute(
         req.params.id as string,
@@ -97,12 +90,7 @@ export function createWishlistRouter(
 
   router.patch('/:id', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: { message: 'Unauthorized' } });
-        return;
-      }
+      const { id: userId } = (req as AuthenticatedRequest).user;
 
       const item = await dependencies.updateWishlistItemUseCase.execute(
         req.params.id as string,
@@ -118,12 +106,7 @@ export function createWishlistRouter(
 
   router.delete('/:id', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const userId = req.user?.id;
-
-      if (!userId) {
-        res.status(401).json({ error: { message: 'Unauthorized' } });
-        return;
-      }
+      const { id: userId } = (req as AuthenticatedRequest).user;
 
       await dependencies.deleteWishlistItemUseCase.execute(req.params.id as string, userId);
 
@@ -139,12 +122,7 @@ export function createWishlistRouter(
     upload.array('images', 3),
     async (req, res, next) => {
       try {
-        const userId = req.user?.id;
-
-        if (!userId) {
-          res.status(401).json({ error: { message: 'Unauthorized' } });
-          return;
-        }
+        const { id: userId } = (req as AuthenticatedRequest).user;
 
         const files = req.files;
         const images = Array.isArray(files)
