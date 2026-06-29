@@ -64,7 +64,7 @@ describe('validateQuery', () => {
     validateQuery(testSchema)(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(req.query).toEqual({ name: 'Alice', age: 30 });
+    expect(req.validatedQueries).toEqual({ name: 'Alice', age: 30 });
   });
 
   it('calls next with ValidationError for invalid query', () => {

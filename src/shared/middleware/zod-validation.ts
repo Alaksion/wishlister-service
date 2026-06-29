@@ -48,7 +48,7 @@ export function validateQuery<T>(schema: ZodSchema<T>) {
       return;
     }
 
-    req.query = result.data as Record<string, string | string[] | undefined>;
+    req.validatedQueries = result.data as Record<string, unknown>;
     next();
   };
 }
@@ -70,6 +70,7 @@ export function validateParams<T>(schema: ZodSchema<T>) {
 declare module 'express-serve-static-core' {
   interface Request {
     validatedHeaders?: Record<string, unknown>;
+    validatedQueries?: Record<string, unknown>;
   }
 }
 
