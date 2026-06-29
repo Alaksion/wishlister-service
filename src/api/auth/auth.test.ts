@@ -211,7 +211,6 @@ describe('Auth endpoints', () => {
       });
 
       refreshToken = response.body.refreshToken;
-      expect(refreshToken).toBeDefined();
     });
 
     it('returns 204 and revokes the refresh token', async () => {

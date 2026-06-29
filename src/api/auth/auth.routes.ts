@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { Router } from 'express';
 import { RegisterUserUseCase } from '../../domains/user/application/register-user.js';
 import { LoginUseCase } from '../../domains/user/application/login.js';
@@ -7,7 +6,7 @@ import { LogoutAllUseCase } from '../../domains/user/application/logout-all.js';
 import { RefreshUseCase } from '../../domains/user/application/refresh.js';
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 import { createMongoRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.mongo.js';
-import { loginSchema, registerUserSchema } from '../../domains/user/domain/user.js';
+import { loginSchema, logoutSchema, registerUserSchema } from '../../domains/user/domain/user.js';
 import { validateBody, validateHeader } from '../../shared/middleware/zod-validation.js';
 
 export interface AuthDependencies {
@@ -30,9 +29,7 @@ function createDefaultDependencies(): AuthDependencies {
   };
 }
 
-const refreshTokenHeaderSchema = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required'),
-});
+const refreshTokenHeaderSchema = logoutSchema;
 
 export function createAuthRouter(
   dependencies: AuthDependencies = createDefaultDependencies()
@@ -72,7 +69,7 @@ export function createAuthRouter(
     validateHeader(refreshTokenHeaderSchema, 'x-refresh-token'),
     async (req, res, next) => {
       try {
-        const refreshToken = req.headers['x-refresh-token'] as string;
+        const { refreshToken } = req.validatedHeaders as { refreshToken: string };
 
         const tokens = await dependencies.refreshUseCase.execute({ refreshToken });
 
@@ -88,7 +85,7 @@ export function createAuthRouter(
     validateHeader(refreshTokenHeaderSchema, 'x-refresh-token'),
     async (req, res, next) => {
       try {
-        const refreshToken = req.headers['x-refresh-token'] as string;
+        const { refreshToken } = req.validatedHeaders as { refreshToken: string };
 
         await dependencies.logoutUseCase.execute({ refreshToken });
 
@@ -104,7 +101,7 @@ export function createAuthRouter(
     validateHeader(refreshTokenHeaderSchema, 'x-refresh-token'),
     async (req, res, next) => {
       try {
-        const refreshToken = req.headers['x-refresh-token'] as string;
+        const { refreshToken } = req.validatedHeaders as { refreshToken: string };
 
         await dependencies.logoutAllUseCase.execute({ refreshToken });
 
