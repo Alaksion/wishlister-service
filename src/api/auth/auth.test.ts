@@ -103,7 +103,12 @@ describe('Auth endpoints', () => {
     it('returns 400 for missing fields', async () => {
       const response = await request(app).post('/auth/register').send({}).expect(400);
 
-      expect(response.body.error.message).toBe('Email, displayName, and password are required');
+      expect(response.body.error.message).toBe('Validation failed');
+      expect(response.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+        ])
+      );
     });
   });
 
@@ -164,7 +169,12 @@ describe('Auth endpoints', () => {
     it('returns 400 for missing fields', async () => {
       const response = await request(app).post('/auth/login').send({}).expect(400);
 
-      expect(response.body.error.message).toBe('Email and password are required');
+      expect(response.body.error.message).toBe('Validation failed');
+      expect(response.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+        ])
+      );
     });
 
     it('persists a hash of the refresh token', async () => {
@@ -201,6 +211,7 @@ describe('Auth endpoints', () => {
       });
 
       refreshToken = response.body.refreshToken;
+      expect(refreshToken).toBeDefined();
     });
 
     it('returns 204 and revokes the refresh token', async () => {
@@ -222,7 +233,12 @@ describe('Auth endpoints', () => {
     it('returns 400 when refresh token is missing', async () => {
       const response = await request(app).post('/auth/logout').expect(400);
 
-      expect(response.body.error.message).toBe('Refresh token is required');
+      expect(response.body.error.message).toBe('Validation failed');
+      expect(response.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: 'refreshToken', message: expect.any(String) }),
+        ])
+      );
     });
   });
 
@@ -277,7 +293,12 @@ describe('Auth endpoints', () => {
     it('returns 400 when refresh token is missing', async () => {
       const response = await request(app).post('/auth/refresh').expect(400);
 
-      expect(response.body.error.message).toBe('Refresh token is required');
+      expect(response.body.error.message).toBe('Validation failed');
+      expect(response.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: 'refreshToken', message: expect.any(String) }),
+        ])
+      );
     });
   });
 
@@ -325,7 +346,12 @@ describe('Auth endpoints', () => {
     it('returns 400 when refresh token is missing', async () => {
       const response = await request(app).post('/auth/logout-all').expect(400);
 
-      expect(response.body.error.message).toBe('Refresh token is required');
+      expect(response.body.error.message).toBe('Validation failed');
+      expect(response.body.error.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: 'refreshToken', message: expect.any(String) }),
+        ])
+      );
     });
   });
 });
