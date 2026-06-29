@@ -5,8 +5,11 @@ import { errorHandler } from './shared/middleware/error-handler.js';
 import { healthRouter } from './health/health.routes.js';
 import { createAuthRouter, type AuthDependencies } from './auth/auth.routes.js';
 
+import { createUsersRouter, type UsersDependencies } from './users/users.routes.js';
+
 export interface AppDependencies {
   authDependencies?: AuthDependencies;
+  usersDependencies?: UsersDependencies;
 }
 
 export async function createApp(dependencies: AppDependencies = {}) {
@@ -16,6 +19,7 @@ export async function createApp(dependencies: AppDependencies = {}) {
 
   app.use('/health', healthRouter);
   app.use('/auth', createAuthRouter(dependencies.authDependencies));
+  app.use('/users', createUsersRouter(dependencies.usersDependencies));
 
   app.use(errorHandler);
 
