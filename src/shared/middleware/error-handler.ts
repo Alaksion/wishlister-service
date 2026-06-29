@@ -1,15 +1,8 @@
 import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../errors/app-error.js';
-import { ValidationError, type ValidationErrorDetail } from './zod-validation.js';
+import { ValidationError, formatZodIssues } from './zod-validation.js';
 import { config } from '../config/config.js';
-
-function formatZodIssues(error: ZodError): ValidationErrorDetail[] {
-  return error.issues.map((issue) => ({
-    path: issue.path.join('.'),
-    message: issue.message,
-  }));
-}
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   if (err instanceof ValidationError) {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { validateBody, validateQuery, validateParams } from './zod-validation.js';
-import type { Request, Response } from 'express';
 
 function createRequest(partial: Partial<Request> = {}): Request {
   return {

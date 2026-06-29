@@ -23,6 +23,8 @@ function formatZodIssues(error: ZodError): ValidationErrorDetail[] {
   }));
 }
 
+export { formatZodIssues };
+
 export function validateBody<T>(schema: ZodSchema<T>) {
   return (req: Request, _res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
