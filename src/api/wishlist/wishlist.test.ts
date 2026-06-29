@@ -413,6 +413,29 @@ describe('GET /items', () => {
     expect(response.body.items[0].title).toBe('Expensive');
     expect(response.body.items[1].title).toBe('Cheap');
   });
+
+  it('returns 400 for invalid query parameters', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+
+    const response = await request(app)
+      .get('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .query({ limit: 'not-a-number' })
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Validation failed');
+    expect(response.body.error.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: expect.any(String), message: expect.any(String) }),
+      ])
+    );
+  });
 });
 
 describe('GET /items/:id and PATCH /items/:id', () => {
