@@ -51,6 +51,13 @@ export class MongoUserRepository implements UserRepository {
       id: result.insertedId.toHexString(),
     };
   }
+
+  async deactivate(id: string): Promise<void> {
+    await this.collection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { isActive: false, updatedAt: new Date() } }
+    );
+  }
 }
 
 export function createMongoUserRepository(): UserRepository {

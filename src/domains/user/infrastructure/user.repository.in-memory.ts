@@ -22,6 +22,12 @@ export class InMemoryUserRepository implements UserRepository {
     return created;
   }
 
+  async deactivate(id: string): Promise<void> {
+    this.users = this.users.map((user) =>
+      user.id === id ? { ...user, isActive: false, updatedAt: new Date() } : user
+    );
+  }
+
   clear(): void {
     this.users = [];
   }
