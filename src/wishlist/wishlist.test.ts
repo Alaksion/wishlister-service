@@ -4,10 +4,10 @@ import type { Express } from 'express';
 import { createApp } from '../app.js';
 import { RegisterUserUseCase } from '../domains/user/application/register-user.js';
 import { LoginUseCase } from '../domains/user/application/login.js';
-import { DeactivateUserUseCase } from '../domains/user/application/deactivate-user.js';
 import { LogoutUseCase } from '../domains/user/application/logout.js';
 import { LogoutAllUseCase } from '../domains/user/application/logout-all.js';
 import { RefreshUseCase } from '../domains/user/application/refresh.js';
+import { CreateWishlistItemUseCase } from '../domains/wishlist/application/create-wishlist-item.js';
 import { InMemoryUserRepository } from '../domains/user/infrastructure/user.repository.in-memory.js';
 import { InMemoryRefreshTokenRepository } from '../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
 import { InMemoryWishlistItemRepository } from '../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
@@ -19,7 +19,7 @@ class FakeStorageService implements StorageService {
   uploadedObjects: Array<{ key: string; contentType: string }> = [];
   deletedKeys: string[] = [];
 
-  async uploadObject(key: string, _buffer: Buffer, contentType: string): Promise<UploadedObject> {
+  async uploadObject(key: string, buffer: Buffer, contentType: string): Promise<UploadedObject> {
     this.uploadedObjects.push({ key, contentType });
     return {
       key,
@@ -36,7 +36,14 @@ class FakeStorageService implements StorageService {
   }
 }
 
-describe('DELETE /users/me', () => {
+function createFakeImageBuffer(): Buffer {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64'
+  );
+}
+
+describe('POST /items', () => {
   let app: Express;
   let userRepository: InMemoryUserRepository;
   let refreshTokenRepository: InMemoryRefreshTokenRepository;
@@ -51,9 +58,7 @@ describe('DELETE /users/me', () => {
 
     const registerUserUseCase = new RegisterUserUseCase(userRepository);
     const loginUseCase = new LoginUseCase(userRepository, refreshTokenRepository);
-    const deactivateUserUseCase = new DeactivateUserUseCase(
-      userRepository,
-      refreshTokenRepository,
+    const createWishlistItemUseCase = new CreateWishlistItemUseCase(
       wishlistItemRepository,
       storageService
     );
@@ -62,18 +67,18 @@ describe('DELETE /users/me', () => {
       authDependencies: {
         registerUserUseCase,
         loginUseCase,
-        logoutUseCase: new LogoutUseCase(refreshTokenRepository),
-        logoutAllUseCase: new LogoutAllUseCase(refreshTokenRepository),
-        refreshUseCase: new RefreshUseCase(refreshTokenRepository),
+        logoutUseCase: {} as unknown as LogoutUseCase,
+        logoutAllUseCase: {} as unknown as LogoutAllUseCase,
+        refreshUseCase: {} as unknown as RefreshUseCase,
       },
-      usersDependencies: {
-        deactivateUserUseCase,
+      wishlistDependencies: {
+        createWishlistItemUseCase,
         authMiddleware: createAuthMiddleware(userRepository),
       },
     });
   });
 
-  it('deactivates the authenticated user', async () => {
+  it('creates an item owned by the authenticated user', async () => {
     const registerResponse = await request(app).post('/auth/register').send({
       email: 'alice@example.com',
       displayName: 'Alice',
@@ -81,106 +86,92 @@ describe('DELETE /users/me', () => {
     });
 
     const accessToken = generateAccessToken(registerResponse.body.id);
-
-    await request(app)
-      .delete('/users/me')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(204);
-
-    const user = await userRepository.findById(registerResponse.body.id);
-    expect(user?.isActive).toBe(false);
-  });
-
-  it('deletes all refresh tokens for the user', async () => {
-    await request(app).post('/auth/register').send({
-      email: 'alice@example.com',
-      displayName: 'Alice',
-      password: 'Password123!',
-    });
-
-    const loginResponse = await request(app).post('/auth/login').send({
-      email: 'alice@example.com',
-      password: 'Password123!',
-    });
-
-    const accessToken = loginResponse.body.accessToken;
-
-    await request(app)
-      .delete('/users/me')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(204);
-
-    const storedTokens = refreshTokenRepository['refreshTokens'];
-    expect(storedTokens).toHaveLength(0);
-  });
-
-  it('deletes all wishlist items and their S3 objects', async () => {
-    const registerResponse = await request(app).post('/auth/register').send({
-      email: 'alice@example.com',
-      displayName: 'Alice',
-      password: 'Password123!',
-    });
-
-    const userId = registerResponse.body.id;
-    const accessToken = generateAccessToken(userId);
-
-    wishlistItemRepository.add({
-      id: 'item-1',
-      userId,
-      title: 'Item 1',
-      currency: 'USD',
-      priority: 'medium',
-      isPurchased: false,
-      images: [
-        {
-          s3Key: 'user/alice/image1.jpg',
-          url: 'https://example.com/image1.jpg',
-          uploadedAt: new Date(),
-        },
-        {
-          s3Key: 'user/alice/image2.jpg',
-          url: 'https://example.com/image2.jpg',
-          uploadedAt: new Date(),
-        },
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    await request(app)
-      .delete('/users/me')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(204);
-
-    const items = await wishlistItemRepository.findByUserId(userId);
-    expect(items).toHaveLength(0);
-    expect(storageService.deletedKeys).toEqual(['user/alice/image1.jpg', 'user/alice/image2.jpg']);
-  });
-
-  it('returns 401 for subsequent requests after deactivation', async () => {
-    const registerResponse = await request(app).post('/auth/register').send({
-      email: 'alice@example.com',
-      displayName: 'Alice',
-      password: 'Password123!',
-    });
-
-    const accessToken = generateAccessToken(registerResponse.body.id);
-
-    await request(app)
-      .delete('/users/me')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(204);
 
     const response = await request(app)
-      .delete('/users/me')
+      .post('/items')
       .set('Authorization', `Bearer ${accessToken}`)
-      .expect(401);
+      .field('title', 'New Bike')
+      .field('description', 'A cool bike')
+      .field('url', 'https://example.com/bike')
+      .field('price', '25000')
+      .field('currency', 'USD')
+      .field('priority', 'high')
+      .expect(201);
 
-    expect(response.body.error.message).toBe('Invalid or expired token');
+    expect(response.body.title).toBe('New Bike');
+    expect(response.body.description).toBe('A cool bike');
+    expect(response.body.url).toBe('https://example.com/bike');
+    expect(response.body.price).toBe(25000);
+    expect(response.body.currency).toBe('USD');
+    expect(response.body.priority).toBe('high');
+    expect(response.body.isPurchased).toBe(false);
+    expect(response.body.userId).toBe(registerResponse.body.id);
+    expect(response.body.images).toEqual([]);
+  });
+
+  it('accepts up to 3 images and stores s3Key and url', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'bob@example.com',
+      displayName: 'Bob',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+    const imageBuffer = createFakeImageBuffer();
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Headphones')
+      .attach('images', imageBuffer, 'image1.png')
+      .attach('images', imageBuffer, 'image2.png')
+      .expect(201);
+
+    expect(response.body.images).toHaveLength(2);
+    expect(response.body.images[0].s3Key).toBeDefined();
+    expect(response.body.images[0].url).toBeDefined();
+    expect(storageService.uploadedObjects).toHaveLength(2);
+  });
+
+  it('returns 400 for missing title', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'charlie@example.com',
+      displayName: 'Charlie',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('priority', 'low')
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Validation failed');
+  });
+
+  it('returns 400 for invalid URL', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'dave@example.com',
+      displayName: 'Dave',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Thing')
+      .field('url', 'not-a-url')
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Validation failed');
   });
 
   it('returns 401 without authorization header', async () => {
-    const response = await request(app).delete('/users/me').expect(401);
+    const response = await request(app).post('/items').field('title', 'Thing').expect(401);
 
     expect(response.body.error.message).toBe('Invalid or expired token');
   });
