@@ -5,7 +5,7 @@ import { createMongoRefreshTokenRepository } from '../../domains/refresh-token/i
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import {
   createAuthMiddleware,
-  type AuthenticatedRequest,
+  getAuthenticatedUser,
 } from '../../shared/middleware/auth-middleware.js';
 import { createStorageService } from '../../shared/storage/storage-service.js';
 
@@ -34,7 +34,7 @@ export function createUsersRouter(
 
   router.delete('/me', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const { id: userId } = (req as AuthenticatedRequest).user;
+      const { id: userId } = getAuthenticatedUser(req);
 
       await dependencies.deactivateUserUseCase.execute(userId);
 

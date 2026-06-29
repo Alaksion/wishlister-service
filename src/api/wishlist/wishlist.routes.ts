@@ -8,7 +8,7 @@ import { DeleteWishlistItemUseCase } from '../../domains/wishlist/application/de
 import { createMongoWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.mongo.js';
 import {
   createAuthMiddleware,
-  type AuthenticatedRequest,
+  getAuthenticatedUser,
 } from '../../shared/middleware/auth-middleware.js';
 import { createStorageService } from '../../shared/storage/storage-service.js';
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
@@ -51,7 +51,7 @@ export function createWishlistRouter(
 
   router.get('/', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const { id: userId } = (req as AuthenticatedRequest).user;
+      const { id: userId } = getAuthenticatedUser(req);
 
       const result = await dependencies.listWishlistItemsUseCase.execute(
         {
@@ -75,7 +75,7 @@ export function createWishlistRouter(
 
   router.get('/:id', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const { id: userId } = (req as AuthenticatedRequest).user;
+      const { id: userId } = getAuthenticatedUser(req);
 
       const item = await dependencies.getWishlistItemUseCase.execute(
         req.params.id as string,
@@ -90,7 +90,7 @@ export function createWishlistRouter(
 
   router.patch('/:id', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const { id: userId } = (req as AuthenticatedRequest).user;
+      const { id: userId } = getAuthenticatedUser(req);
 
       const item = await dependencies.updateWishlistItemUseCase.execute(
         req.params.id as string,
@@ -106,7 +106,7 @@ export function createWishlistRouter(
 
   router.delete('/:id', dependencies.authMiddleware, async (req, res, next) => {
     try {
-      const { id: userId } = (req as AuthenticatedRequest).user;
+      const { id: userId } = getAuthenticatedUser(req);
 
       await dependencies.deleteWishlistItemUseCase.execute(req.params.id as string, userId);
 
@@ -122,7 +122,7 @@ export function createWishlistRouter(
     upload.array('images', 3),
     async (req, res, next) => {
       try {
-        const { id: userId } = (req as AuthenticatedRequest).user;
+        const { id: userId } = getAuthenticatedUser(req);
 
         const files = req.files;
         const images = Array.isArray(files)
