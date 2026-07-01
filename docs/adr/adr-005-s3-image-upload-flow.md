@@ -1,0 +1,71 @@
+# ADR-005: Two-Phase S3 Image Upload with Staging Keys
+
+## Status
+
+Accepted
+
+## Context
+
+`WishlistItem` supports up to 3 server-side-uploaded images. Images must be validated, compressed, uploaded to S3, and associated with the item record. We need an upload flow that avoids orphan S3 objects when database persistence fails, while keeping the implementation simple for v1.
+
+## Decision
+
+Use a two-phase upload flow with a staging prefix and a later cleanup job.
+
+1. **Validate** each file: ≤ 5 MB, MIME type in `image/jpeg`, `image/png`, `image/webp`.
+2. **Compress** the image server-side using `sharp` with acceptable quality loss.
+3. **Upload** the compressed buffer to a staging key:
+   ```
+   staging/{userId}/{itemId}/{randomName}
+   ```
+4. **Persist** the `WishlistItem` record with `Image` metadata:
+   - `s3Key`: the final key `{userId}/{itemId}/{randomName}`
+   - `url`: public S3 object URL
+   - `originalName`
+   - `uploadedAt`
+5. **Move** the object from the staging key to the final key only after the database write succeeds.
+6. **Clean up** staging objects left behind by failed or interrupted requests via a future background job.
+
+### S3 Configuration
+
+- Use the AWS SDK for JavaScript (S3 client) with credentials from environment variables.
+- Required env vars:
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+  - `AWS_REGION`
+  - `AWS_S3_BUCKET_NAME`
+  - `S3_PUBLIC_URL_PREFIX` (base URL for constructing public object URLs; falls back to `https://{bucket}.s3.{region}.amazonaws.com/` if not set)
+  - `S3_ENDPOINT` (optional, for S3-compatible/MinIO backends)
+- The S3 bucket is public-read, so `url` can be served directly without presigned URLs.
+- Object ACL is not required because the bucket policy grants public read access.
+
+### Key Design
+
+- Final key format: `{userId}/{itemId}/{randomName}`
+- Staging key format: `staging/{userId}/{itemId}/{randomName}`
+- `randomName` is a unique, non-guessable identifier (e.g., UUID + derived suffix).
+- The `userId` and `itemId` segments make ownership obvious and bulk cleanup by user possible.
+
+### Failure Handling
+
+| Step fails | Outcome |
+|------------|---------|
+| Validation/compression | Return 400, no S3 or DB side effects. |
+| Staging upload | Return 500, no DB record. |
+| DB persistence | Return 500, staging object remains for cleanup job. |
+| Move to final key | DB record exists but points to a staging path. Cleanup job or a retry must reconcile. |
+| Item deletion | Hard-delete the record; attempt to delete all S3 objects. Log failures for later cleanup. |
+
+## Rationale
+
+- Two-phase staging avoids orphan final objects when DB writes fail.
+- Moving after persistence keeps the stored `s3Key` stable and predictable for deletion and serving.
+- Public-read bucket keeps serving simple and avoids presigned URL complexity in v1.
+- User/item namespaced keys support intuitive organization and targeted cleanup.
+
+## Consequences
+
+- Requires `StorageService` to support staging upload, object move, and deletion.
+- A background cleanup job for `staging/` objects must be implemented later.
+- If the move step fails, the record may reference a staging key temporarily.
+- Server CPU is spent on `sharp` compression; upload size and concurrency should be monitored.

@@ -44,8 +44,15 @@ Backend service for managing user accounts and private wishlisted items. Built w
 - Duplicate items (same title/url) are allowed.
 - Maximum 3 images per item.
 - Image upload: each file ≤ 5 MB, MIME type restricted to image/jpeg, image/png, image/webp.
-- Images are compressed server-side (quality reduction acceptable, no severe loss), then uploaded to S3-compatible storage.
-- Both `s3Key` and public serving `url` are stored; `s3Key` enables deletion.
+- Images are compressed server-side with `sharp` (quality reduction acceptable, no severe loss).
+- Images are uploaded to S3 using a two-phase staging flow:
+  1. Compress and upload to a staging key: `staging/{userId}/{itemId}/{randomName}`.
+  2. Persist the wishlist item record with the final `Image` metadata.
+  3. On successful persistence, move the object from staging to the final key: `{userId}/{itemId}/{randomName}`.
+  4. If persistence fails, the staging object remains and is cleaned up by a later background job.
+- Both `s3Key` and public serving `url` are stored on the record; `s3Key` enables deletion.
+- The final S3 object key structure is `{userId}/{itemId}/{randomName}`.
+- The S3 bucket is public-read; public `url` points directly to the object.
 - On item deletion, associated S3 objects must be deleted to prevent orphans.
 - `isPurchased` can be toggled freely.
 
