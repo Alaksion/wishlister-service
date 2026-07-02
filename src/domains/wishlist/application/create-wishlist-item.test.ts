@@ -123,7 +123,7 @@ describe('CreateWishlistItemUseCase', () => {
     );
 
     expect(result.images).toHaveLength(1);
-    expect(result.images[0]!.s3Key).toMatch(new RegExp(`^user-1/${result.id}/[\\w-]+\\.png$`));
+    expect(result.images[0]!.s3Key).toMatch(/^user-1\/[\w-]+\/[\w-]+\.png$/);
     expect(result.images[0]!.url).toBe(`https://example.com/${result.images[0]!.s3Key}`);
   });
 
@@ -175,7 +175,7 @@ describe('CreateWishlistItemUseCase', () => {
 
   it('does not keep a DB record if persistence fails after staging upload', async () => {
     class FailingRepository extends InMemoryWishlistItemRepository {
-      async create(_item: WishlistItem): Promise<WishlistItem> {
+      async create(_item: Omit<WishlistItem, 'id'>): Promise<WishlistItem> {
         throw new Error('DB write failed');
       }
     }
@@ -233,7 +233,7 @@ describe('CreateWishlistItemUseCase', () => {
 
     expect(result.images).toHaveLength(2);
     expect(storageService.movedObjects).toHaveLength(0);
-    expect(result.images[0]!.s3Key).toMatch(new RegExp(`^user-1/${result.id}/[\\w-]+\\.png$`));
+    expect(result.images[0]!.s3Key).toMatch(/^user-1\/[\w-]+\/[\w-]+\.png$/);
 
     const storedItem = await repository.findById(result.id);
     expect(storedItem!.images[0]!.s3Key).toBe(result.images[0]!.s3Key);

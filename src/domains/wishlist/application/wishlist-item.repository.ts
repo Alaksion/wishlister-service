@@ -17,7 +17,7 @@ export interface PaginatedWishlistItems {
 }
 
 export interface WishlistItemRepository {
-  create(item: WishlistItem): Promise<WishlistItem>;
+  create(item: Omit<WishlistItem, 'id'>): Promise<WishlistItem>;
   findByUserId(userId: string): Promise<WishlistItem[]>;
   list(options: ListItemsOptions): Promise<PaginatedWishlistItems>;
   findById(id: string): Promise<WishlistItem | null>;

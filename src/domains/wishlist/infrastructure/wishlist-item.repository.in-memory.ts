@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb';
 import type { WishlistItem } from '../domain/wishlist-item.js';
 import type {
   ListItemsOptions,
@@ -8,9 +9,13 @@ import type {
 export class InMemoryWishlistItemRepository implements WishlistItemRepository {
   private items: WishlistItem[] = [];
 
-  async create(item: WishlistItem): Promise<WishlistItem> {
-    this.items.push(item);
-    return item;
+  async create(item: Omit<WishlistItem, 'id'>): Promise<WishlistItem> {
+    const created: WishlistItem = {
+      ...item,
+      id: new ObjectId().toHexString(),
+    };
+    this.items.push(created);
+    return created;
   }
 
   async findByUserId(userId: string): Promise<WishlistItem[]> {

@@ -72,12 +72,10 @@ export type UpdateWishlistItemInput = z.infer<typeof updateWishlistItemSchema>;
 export function createWishlistItem(
   input: CreateWishlistItemInput,
   userId: string,
-  images: Image[],
-  id: string
-): WishlistItem {
+  images: Image[]
+): Omit<WishlistItem, 'id'> {
   const now = new Date();
-  const item: WishlistItem = {
-    id,
+  const item: Omit<WishlistItem, 'id'> = {
     userId,
     title: input.title.trim(),
     currency: input.currency.toUpperCase(),

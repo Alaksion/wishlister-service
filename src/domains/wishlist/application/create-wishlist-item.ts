@@ -59,16 +59,18 @@ export class CreateWishlistItemUseCase {
       throw new BadRequestError(`Maximum ${MAX_IMAGES} images allowed`);
     }
 
-    // The use case generates the item id before repository insertion so the
-    // staging upload and the persisted record can share the same final key
-    // shape: {userId}/{itemId}/{randomName}.
-    const itemId = crypto.randomUUID();
+    // The use case generates a dedicated item id for S3 keys before repository
+    // insertion so the staging upload and the final record can share the same
+    // key shape: {userId}/{itemId}/{randomName}. This is separate from the
+    // repository-generated database id to avoid coupling the application layer
+    // to MongoDB's ObjectId generation.
+    const s3ItemId = crypto.randomUUID();
     const stagedImages: StagedImage[] = [];
 
     for (const image of images) {
       this.validateImage(image);
       const compressedBuffer = await this.compressImage(image.buffer, image.mimetype);
-      const { stagingKey, finalKey } = this.generateImageKeys(userId, itemId, image.originalname);
+      const { stagingKey, finalKey } = this.generateImageKeys(userId, s3ItemId, image.originalname);
 
       await this.storageService.uploadObject(stagingKey, compressedBuffer, image.mimetype);
 
@@ -86,7 +88,7 @@ export class CreateWishlistItemUseCase {
       uploadedAt: new Date(),
     }));
 
-    const itemToCreate = createWishlistItem(validated, userId, processedImages, itemId);
+    const itemToCreate = createWishlistItem(validated, userId, processedImages);
     const createdItem = await this.wishlistItemRepository.create(itemToCreate);
 
     for (const stagedImage of stagedImages) {
@@ -94,7 +96,7 @@ export class CreateWishlistItemUseCase {
         await this.storageService.moveObject(stagedImage.stagingKey, stagedImage.finalKey);
       } catch (error) {
         console.error(
-          `Failed to move staged object ${stagedImage.stagingKey} to ${stagedImage.finalKey} for item ${itemId}:`,
+          `Failed to move staged object ${stagedImage.stagingKey} to ${stagedImage.finalKey} for item ${createdItem.id}:`,
           error
         );
       }

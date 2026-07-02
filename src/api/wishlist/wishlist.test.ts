@@ -185,7 +185,7 @@ describe('POST /items', () => {
       .expect(201);
 
     const finalKey = response.body.images[0].s3Key;
-    expect(finalKey).toMatch(new RegExp(`^${userId}/${response.body.id}/[\\w-]+\\.png$`));
+    expect(finalKey).toMatch(new RegExp(`^${userId}/[\\w-]+/[\\w-]+\\.png$`));
     expect(storageService.uploadedObjects[0]!.key).toBe(`staging/${finalKey}`);
     expect(storageService.movedObjects[0]).toEqual({
       sourceKey: `staging/${finalKey}`,
@@ -308,7 +308,7 @@ describe('POST /items', () => {
     const storageService = new FakeStorageService();
 
     class FailingRepository extends InMemoryWishlistItemRepository {
-      async create(_item: WishlistItem): Promise<WishlistItem> {
+      async create(_item: Omit<WishlistItem, 'id'>): Promise<WishlistItem> {
         throw new Error('DB write failed');
       }
     }
