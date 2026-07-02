@@ -11,6 +11,8 @@ const configSchema = z.object({
   AWS_S3_BUCKET_NAME: z.string().min(1).default('wishlister-test-bucket'),
   AWS_ACCESS_KEY_ID: z.string().min(1).default('test-access-key'),
   AWS_SECRET_ACCESS_KEY: z.string().min(1).default('test-secret-key'),
+  S3_PUBLIC_URL_PREFIX: z.string().optional(),
+  S3_ENDPOINT: z.string().optional(),
 });
 
 const parsed = configSchema.safeParse(process.env);
