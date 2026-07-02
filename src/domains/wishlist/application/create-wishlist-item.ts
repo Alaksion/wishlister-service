@@ -40,8 +40,6 @@ interface StagedImage {
   stagingKey: string;
   finalKey: string;
   originalName: string;
-  mimetype: string;
-  compressedBuffer: Buffer;
 }
 
 export class CreateWishlistItemUseCase {
@@ -61,6 +59,9 @@ export class CreateWishlistItemUseCase {
       throw new BadRequestError(`Maximum ${MAX_IMAGES} images allowed`);
     }
 
+    // The use case generates the item id before repository insertion so the
+    // staging upload and the persisted record can share the same final key
+    // shape: {userId}/{itemId}/{randomName}.
     const itemId = crypto.randomUUID();
     const stagedImages: StagedImage[] = [];
 
@@ -75,8 +76,6 @@ export class CreateWishlistItemUseCase {
         stagingKey,
         finalKey,
         originalName: image.originalname,
-        mimetype: image.mimetype,
-        compressedBuffer,
       });
     }
 
@@ -88,35 +87,17 @@ export class CreateWishlistItemUseCase {
     }));
 
     const itemToCreate = createWishlistItem(validated, userId, processedImages, itemId);
-    let createdItem = await this.wishlistItemRepository.create(itemToCreate);
+    const createdItem = await this.wishlistItemRepository.create(itemToCreate);
 
-    for (let i = 0; i < stagedImages.length; i++) {
-      const stagedImage = stagedImages[i]!;
+    for (const stagedImage of stagedImages) {
       try {
-        const movedObject = await this.storageService.moveObject(
-          stagedImage.stagingKey,
-          stagedImage.finalKey
-        );
-        createdItem.images[i] = {
-          ...createdItem.images[i]!,
-          s3Key: movedObject.key,
-          url: movedObject.url,
-        };
+        await this.storageService.moveObject(stagedImage.stagingKey, stagedImage.finalKey);
       } catch (error) {
         console.error(
           `Failed to move staged object ${stagedImage.stagingKey} to ${stagedImage.finalKey} for item ${itemId}:`,
           error
         );
-        createdItem.images[i] = {
-          ...createdItem.images[i]!,
-          s3Key: stagedImage.stagingKey,
-          url: this.storageService.getObjectUrl(stagedImage.stagingKey),
-        };
       }
-    }
-
-    if (stagedImages.length > 0) {
-      createdItem = await this.wishlistItemRepository.update(createdItem.id, createdItem);
     }
 
     return createdItem;

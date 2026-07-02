@@ -215,6 +215,27 @@ describe('POST /items', () => {
     expect(storageService.uploadedObjects).toHaveLength(0);
   });
 
+  it('returns 400 for an image larger than 5 MB', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'too-large@example.com',
+      displayName: 'Too Large',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+    const largeBuffer = Buffer.alloc(6 * 1024 * 1024);
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Thing')
+      .attach('images', largeBuffer, 'image.png')
+      .expect(400);
+
+    expect(response.body.error.message).toBe('Image exceeds maximum size of 5 MB');
+    expect(storageService.uploadedObjects).toHaveLength(0);
+  });
+
   it('returns 400 for missing title', async () => {
     const registerResponse = await request(app).post('/auth/register').send({
       email: 'charlie@example.com',
@@ -281,9 +302,9 @@ describe('POST /items', () => {
 
     expect(response.body.error.message).toBe('Invalid or expired token');
   });
+
   it('returns 500 and does not create a record when persistence fails after staging upload', async () => {
     const userRepository = new InMemoryUserRepository();
-    const wishlistItemRepository = new InMemoryWishlistItemRepository();
     const storageService = new FakeStorageService();
 
     class FailingRepository extends InMemoryWishlistItemRepository {
@@ -291,10 +312,11 @@ describe('POST /items', () => {
         throw new Error('DB write failed');
       }
     }
+    const failingRepository = new FailingRepository();
 
     const registerUserUseCase = new RegisterUserUseCase(userRepository);
     const createWishlistItemUseCase = new CreateWishlistItemUseCase(
-      new FailingRepository(),
+      failingRepository,
       storageService
     );
 
@@ -334,7 +356,7 @@ describe('POST /items', () => {
 
     expect(response.body.error.message).toBe('DB write failed');
     expect(storageService.uploadedObjects).toHaveLength(1);
-    const items = await wishlistItemRepository.findByUserId(registerResponse.body.id);
+    const items = await failingRepository.findByUserId(registerResponse.body.id);
     expect(items).toHaveLength(0);
   });
 });

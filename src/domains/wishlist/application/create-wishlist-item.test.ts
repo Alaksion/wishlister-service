@@ -179,7 +179,8 @@ describe('CreateWishlistItemUseCase', () => {
         throw new Error('DB write failed');
       }
     }
-    const failingUseCase = new CreateWishlistItemUseCase(new FailingRepository(), storageService);
+    const failingRepository = new FailingRepository();
+    const failingUseCase = new CreateWishlistItemUseCase(failingRepository, storageService);
 
     await expect(
       failingUseCase.execute(
@@ -194,7 +195,7 @@ describe('CreateWishlistItemUseCase', () => {
     ).rejects.toThrow('DB write failed');
 
     expect(storageService.uploadedObjects).toHaveLength(1);
-    const items = await repository.findByUserId('user-1');
+    const items = await failingRepository.findByUserId('user-1');
     expect(items).toHaveLength(0);
   });
 
@@ -214,7 +215,7 @@ describe('CreateWishlistItemUseCase', () => {
     expect(storageService.uploadedObjects).toHaveLength(0);
   });
 
-  it('falls back to staging keys in the record when moving a staged object fails', async () => {
+  it('keeps the final s3Key when moving a staged object fails', async () => {
     storageService.moveFailures.set('match-any', new Error('Move failed'));
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
@@ -232,8 +233,7 @@ describe('CreateWishlistItemUseCase', () => {
 
     expect(result.images).toHaveLength(2);
     expect(storageService.movedObjects).toHaveLength(0);
-    expect(result.images[0]!.s3Key).toMatch(/^staging\/user-1\/.*\.png$/);
-    expect(result.images[0]!.url).toBe(`https://example.com/${result.images[0]!.s3Key}`);
+    expect(result.images[0]!.s3Key).toMatch(new RegExp(`^user-1/${result.id}/[\\w-]+\\.png$`));
 
     const storedItem = await repository.findById(result.id);
     expect(storedItem!.images[0]!.s3Key).toBe(result.images[0]!.s3Key);
