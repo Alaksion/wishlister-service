@@ -24,7 +24,7 @@ import {
   validateQuery,
   validateParams,
 } from '../../shared/middleware/zod-validation.js';
-import { createStorageService } from '../../shared/storage/storage-service.js';
+import { createStorageService, type StorageService } from '../../shared/storage/storage-service.js';
 import { createMongoUserRepository } from '../../domains/user/infrastructure/user.repository.mongo.js';
 
 export interface WishlistDependencies {
@@ -41,19 +41,23 @@ const upload = multer({ storage: multer.memoryStorage() });
 function createDefaultDependencies(): WishlistDependencies {
   const userRepository = createMongoUserRepository();
   const wishlistItemRepository = createMongoWishlistItemRepository();
-  const storageService = createStorageService();
+  let storageService: StorageService | undefined;
   return {
-    createWishlistItemUseCase: new CreateWishlistItemUseCase(
-      wishlistItemRepository,
-      storageService
-    ),
+    get createWishlistItemUseCase() {
+      if (storageService === undefined) {
+        storageService = createStorageService();
+      }
+      return new CreateWishlistItemUseCase(wishlistItemRepository, storageService);
+    },
     listWishlistItemsUseCase: new ListWishlistItemsUseCase(wishlistItemRepository),
     getWishlistItemUseCase: new GetWishlistItemUseCase(wishlistItemRepository),
     updateWishlistItemUseCase: new UpdateWishlistItemUseCase(wishlistItemRepository),
-    deleteWishlistItemUseCase: new DeleteWishlistItemUseCase(
-      wishlistItemRepository,
-      storageService
-    ),
+    get deleteWishlistItemUseCase() {
+      if (storageService === undefined) {
+        storageService = createStorageService();
+      }
+      return new DeleteWishlistItemUseCase(wishlistItemRepository, storageService);
+    },
     authMiddleware: createAuthMiddleware(userRepository),
   };
 }

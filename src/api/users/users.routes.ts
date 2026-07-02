@@ -7,7 +7,7 @@ import {
   createAuthMiddleware,
   getAuthenticatedUser,
 } from '../../shared/middleware/auth-middleware.js';
-import { createStorageService } from '../../shared/storage/storage-service.js';
+import { createStorageService, type StorageService } from '../../shared/storage/storage-service.js';
 
 export interface UsersDependencies {
   deactivateUserUseCase: DeactivateUserUseCase;
@@ -16,13 +16,19 @@ export interface UsersDependencies {
 
 function createDefaultDependencies(): UsersDependencies {
   const userRepository = createMongoUserRepository();
+  let storageService: StorageService | undefined;
   return {
-    deactivateUserUseCase: new DeactivateUserUseCase(
-      userRepository,
-      createMongoRefreshTokenRepository(),
-      createMongoWishlistItemRepository(),
-      createStorageService()
-    ),
+    get deactivateUserUseCase() {
+      if (storageService === undefined) {
+        storageService = createStorageService();
+      }
+      return new DeactivateUserUseCase(
+        userRepository,
+        createMongoRefreshTokenRepository(),
+        createMongoWishlistItemRepository(),
+        storageService
+      );
+    },
     authMiddleware: createAuthMiddleware(userRepository),
   };
 }
