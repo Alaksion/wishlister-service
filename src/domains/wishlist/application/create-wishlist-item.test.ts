@@ -40,6 +40,10 @@ class FakeStorageService implements StorageService {
       url: `https://example.com/${destinationKey}`,
     };
   }
+
+  getObjectUrl(key: string): string {
+    return `https://example.com/${key}`;
+  }
 }
 
 function createFakeImageBuffer(): Buffer {
@@ -210,7 +214,7 @@ describe('CreateWishlistItemUseCase', () => {
     expect(storageService.uploadedObjects).toHaveLength(0);
   });
 
-  it('logs and continues when moving a staged object fails', async () => {
+  it('falls back to staging keys in the record when moving a staged object fails', async () => {
     storageService.moveFailures.set('match-any', new Error('Move failed'));
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
@@ -226,6 +230,12 @@ describe('CreateWishlistItemUseCase', () => {
 
     expect(result.images).toHaveLength(2);
     expect(storageService.movedObjects).toHaveLength(0);
+    expect(result.images[0]!.s3Key).toMatch(/^staging\/user-1\/.*\.png$/);
+    expect(result.images[0]!.url).toBe(`https://example.com/${result.images[0]!.s3Key}`);
+
+    const storedItem = await repository.findById(result.id);
+    expect(storedItem!.images[0]!.s3Key).toBe(result.images[0]!.s3Key);
+
     expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining('Failed to move staged object'),

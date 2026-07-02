@@ -52,6 +52,10 @@ class FakeStorageService implements StorageService {
       url: `https://example.com/${destinationKey}`,
     };
   }
+
+  getObjectUrl(key: string): string {
+    return `https://example.com/${key}`;
+  }
 }
 
 function createFakeImageBuffer(): Buffer {
@@ -160,6 +164,55 @@ describe('POST /items', () => {
     expect(response.body.images[0].s3Key).toBeDefined();
     expect(response.body.images[0].url).toBeDefined();
     expect(storageService.uploadedObjects).toHaveLength(2);
+  });
+
+  it('uploads images to a staging prefix before moving to the final key', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'staging@example.com',
+      displayName: 'Staging',
+      password: 'Password123!',
+    });
+
+    const userId = registerResponse.body.id;
+    const accessToken = generateAccessToken(userId);
+    const imageBuffer = createFakeImageBuffer();
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Headphones')
+      .attach('images', imageBuffer, 'image1.png')
+      .expect(201);
+
+    const finalKey = response.body.images[0].s3Key;
+    expect(finalKey).toMatch(new RegExp(`^${userId}/${response.body.id}/[\\w-]+\\.png$`));
+    expect(storageService.uploadedObjects[0]!.key).toBe(`staging/${finalKey}`);
+    expect(storageService.movedObjects[0]).toEqual({
+      sourceKey: `staging/${finalKey}`,
+      destinationKey: finalKey,
+    });
+  });
+
+  it('returns 400 for an unsupported image type', async () => {
+    const registerResponse = await request(app).post('/auth/register').send({
+      email: 'unsupported@example.com',
+      displayName: 'Unsupported',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+
+    const response = await request(app)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Thing')
+      .attach('images', Buffer.from('not-an-image'), 'image.gif')
+      .expect(400);
+
+    expect(response.body.error.message).toBe(
+      'Invalid image type: image/gif. Allowed types: image/jpeg, image/png, image/webp'
+    );
+    expect(storageService.uploadedObjects).toHaveLength(0);
   });
 
   it('returns 400 for missing title', async () => {

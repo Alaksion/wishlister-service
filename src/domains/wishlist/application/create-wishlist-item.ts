@@ -39,8 +39,9 @@ export interface CreateWishlistItemUseCaseResult {
 interface StagedImage {
   stagingKey: string;
   finalKey: string;
-  finalUrl: string;
   originalName: string;
+  mimetype: string;
+  compressedBuffer: Buffer;
 }
 
 export class CreateWishlistItemUseCase {
@@ -71,39 +72,54 @@ export class CreateWishlistItemUseCase {
       const compressedBuffer = await this.compressImage(image.buffer, image.mimetype);
       const { stagingKey, finalKey } = this.generateImageKeys(userId, itemId, image.originalname);
 
-      const stagedObject = await this.storageService.uploadObject(
-        stagingKey,
-        compressedBuffer,
-        image.mimetype
-      );
+      await this.storageService.uploadObject(stagingKey, compressedBuffer, image.mimetype);
 
       stagedImages.push({
         stagingKey,
         finalKey,
-        finalUrl: this.deriveFinalObjectUrl(stagedObject.url, stagingKey, finalKey),
         originalName: image.originalname,
+        mimetype: image.mimetype,
+        compressedBuffer,
       });
     }
 
     const processedImages: Image[] = stagedImages.map((stagedImage) => ({
       s3Key: stagedImage.finalKey,
-      url: stagedImage.finalUrl,
+      url: this.storageService.getObjectUrl(stagedImage.finalKey),
       originalName: stagedImage.originalName,
       uploadedAt: new Date(),
     }));
 
-    const itemToCreate = createWishlistItem(itemId, validated, userId, processedImages);
-    const createdItem = await this.wishlistItemRepository.create(itemToCreate);
+    const itemToCreate = createWishlistItem(validated, userId, processedImages, itemId);
+    let createdItem = await this.wishlistItemRepository.create(itemToCreate);
 
-    for (const stagedImage of stagedImages) {
+    for (let i = 0; i < stagedImages.length; i++) {
+      const stagedImage = stagedImages[i]!;
       try {
-        await this.storageService.moveObject(stagedImage.stagingKey, stagedImage.finalKey);
+        const movedObject = await this.storageService.moveObject(
+          stagedImage.stagingKey,
+          stagedImage.finalKey
+        );
+        createdItem.images[i] = {
+          ...createdItem.images[i]!,
+          s3Key: movedObject.key,
+          url: movedObject.url,
+        };
       } catch (error) {
         console.error(
           `Failed to move staged object ${stagedImage.stagingKey} to ${stagedImage.finalKey} for item ${itemId}:`,
           error
         );
+        createdItem.images[i] = {
+          ...createdItem.images[i]!,
+          s3Key: stagedImage.stagingKey,
+          url: this.storageService.getObjectUrl(stagedImage.stagingKey),
+        };
       }
+    }
+
+    if (stagedImages.length > 0) {
+      createdItem = await this.wishlistItemRepository.update(createdItem.id, createdItem);
     }
 
     return createdItem;
@@ -146,13 +162,5 @@ export class CreateWishlistItemUseCase {
     const stagingKey = `staging/${userId}/${itemId}/${randomName}`;
     const finalKey = `${userId}/${itemId}/${randomName}`;
     return { stagingKey, finalKey };
-  }
-
-  private deriveFinalObjectUrl(
-    stagingObjectUrl: string,
-    stagingKey: string,
-    finalKey: string
-  ): string {
-    return stagingObjectUrl.replace(stagingKey, finalKey);
   }
 }
