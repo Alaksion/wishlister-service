@@ -43,6 +43,10 @@ class FakeStorageService implements StorageService {
       url: `https://example.com/${destinationKey}`,
     };
   }
+
+  getObjectUrl(key: string): string {
+    return `https://example.com/${key}`;
+  }
 }
 
 describe('DELETE /users/me', () => {
