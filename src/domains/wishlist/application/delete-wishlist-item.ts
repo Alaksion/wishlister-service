@@ -15,11 +15,15 @@ export class DeleteWishlistItemUseCase {
       throw new NotFoundError('Item not found');
     }
 
+    await this.wishlistItemRepository.delete(itemId);
+
     const s3Keys = item.images.map((image) => image.s3Key);
     if (s3Keys.length > 0) {
-      await this.storageService.deleteObjects(s3Keys);
+      try {
+        await this.storageService.deleteObjects(s3Keys);
+      } catch (error) {
+        console.error(`Failed to delete S3 objects for item ${itemId} after DB deletion:`, error);
+      }
     }
-
-    await this.wishlistItemRepository.delete(itemId);
   }
 }
