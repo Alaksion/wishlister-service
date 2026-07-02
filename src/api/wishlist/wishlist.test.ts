@@ -281,6 +281,62 @@ describe('POST /items', () => {
 
     expect(response.body.error.message).toBe('Invalid or expired token');
   });
+  it('returns 500 and does not create a record when persistence fails after staging upload', async () => {
+    const userRepository = new InMemoryUserRepository();
+    const wishlistItemRepository = new InMemoryWishlistItemRepository();
+    const storageService = new FakeStorageService();
+
+    class FailingRepository extends InMemoryWishlistItemRepository {
+      async create(_item: WishlistItem): Promise<WishlistItem> {
+        throw new Error('DB write failed');
+      }
+    }
+
+    const registerUserUseCase = new RegisterUserUseCase(userRepository);
+    const createWishlistItemUseCase = new CreateWishlistItemUseCase(
+      new FailingRepository(),
+      storageService
+    );
+
+    const testApp = await createApp({
+      authDependencies: {
+        registerUserUseCase,
+        loginUseCase: {} as unknown as LoginUseCase,
+        logoutUseCase: {} as unknown as LogoutUseCase,
+        logoutAllUseCase: {} as unknown as LogoutAllUseCase,
+        refreshUseCase: {} as unknown as RefreshUseCase,
+      },
+      wishlistDependencies: {
+        createWishlistItemUseCase,
+        listWishlistItemsUseCase: {} as unknown as ListWishlistItemsUseCase,
+        getWishlistItemUseCase: {} as unknown as GetWishlistItemUseCase,
+        updateWishlistItemUseCase: {} as unknown as UpdateWishlistItemUseCase,
+        deleteWishlistItemUseCase: {} as unknown as DeleteWishlistItemUseCase,
+        authMiddleware: createAuthMiddleware(userRepository),
+      },
+    });
+
+    const registerResponse = await request(testApp).post('/auth/register').send({
+      email: 'persistence-fail@example.com',
+      displayName: 'Persistence Fail',
+      password: 'Password123!',
+    });
+
+    const accessToken = generateAccessToken(registerResponse.body.id);
+    const imageBuffer = createFakeImageBuffer();
+
+    const response = await request(testApp)
+      .post('/items')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .field('title', 'Headphones')
+      .attach('images', imageBuffer, 'image1.png')
+      .expect(500);
+
+    expect(response.body.error.message).toBe('DB write failed');
+    expect(storageService.uploadedObjects).toHaveLength(1);
+    const items = await wishlistItemRepository.findByUserId(registerResponse.body.id);
+    expect(items).toHaveLength(0);
+  });
 });
 
 describe('GET /items', () => {

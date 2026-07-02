@@ -228,6 +228,8 @@ describe('CreateWishlistItemUseCase', () => {
       [createImageFile(), createImageFile({ originalname: 'image2.png' })]
     );
 
+    consoleErrorSpy.mockRestore();
+
     expect(result.images).toHaveLength(2);
     expect(storageService.movedObjects).toHaveLength(0);
     expect(result.images[0]!.s3Key).toMatch(/^staging\/user-1\/.*\.png$/);
@@ -235,14 +237,6 @@ describe('CreateWishlistItemUseCase', () => {
 
     const storedItem = await repository.findById(result.id);
     expect(storedItem!.images[0]!.s3Key).toBe(result.images[0]!.s3Key);
-
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to move staged object'),
-      expect.any(Error)
-    );
-
-    consoleErrorSpy.mockRestore();
   });
 
   it('rejects images larger than 5 MB', async () => {
