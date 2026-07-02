@@ -1,4 +1,4 @@
-import { ObjectId, type Collection, type Filter } from 'mongodb';
+import { type Collection, type Filter } from 'mongodb';
 import { getDatabase } from '../../../shared/database/database.js';
 import type { WishlistItem } from '../domain/wishlist-item.js';
 import type {
@@ -7,11 +7,11 @@ import type {
   WishlistItemRepository,
 } from '../application/wishlist-item.repository.js';
 
-type WishlistItemDocument = Omit<WishlistItem, 'id'> & { _id: ObjectId };
+type WishlistItemDocument = Omit<WishlistItem, 'id'> & { _id: string };
 
 function toWishlistItem(doc: WishlistItemDocument): WishlistItem {
   const item: WishlistItem = {
-    id: doc._id.toHexString(),
+    id: doc._id,
     userId: doc.userId,
     title: doc.title,
     currency: doc.currency,
@@ -36,23 +36,23 @@ function toWishlistItem(doc: WishlistItemDocument): WishlistItem {
 }
 
 export class MongoWishlistItemRepository implements WishlistItemRepository {
-  private get collection(): Collection<Omit<WishlistItem, 'id'>> {
-    return getDatabase().collection<Omit<WishlistItem, 'id'>>('wishlistItems');
+  private get collection(): Collection<WishlistItemDocument> {
+    return getDatabase().collection<WishlistItemDocument>('wishlistItems');
   }
 
   async create(item: WishlistItem): Promise<WishlistItem> {
     const { id, ...documentWithoutId } = item;
-    await this.collection.insertOne({ ...documentWithoutId, _id: new ObjectId(id) });
+    await this.collection.insertOne({ ...documentWithoutId, _id: id });
     return item;
   }
 
   async findByUserId(userId: string): Promise<WishlistItem[]> {
-    const docs = (await this.collection.find({ userId }).toArray()) as WishlistItemDocument[];
+    const docs = await this.collection.find({ userId }).toArray();
     return docs.map(toWishlistItem);
   }
 
   async list(options: ListItemsOptions): Promise<PaginatedWishlistItems> {
-    const filter: Filter<Omit<WishlistItem, 'id'>> = { userId: options.userId };
+    const filter: Filter<WishlistItemDocument> = { userId: options.userId };
 
     if (options.priority) {
       filter.priority = options.priority;
@@ -71,7 +71,7 @@ export class MongoWishlistItemRepository implements WishlistItemRepository {
         { createdAt: { $lt: options.cursor.createdAt } },
         {
           createdAt: options.cursor.createdAt,
-          _id: { $lt: new ObjectId(options.cursor.id) },
+          _id: { $lt: options.cursor.id },
         },
       ];
     }
@@ -82,11 +82,11 @@ export class MongoWishlistItemRepository implements WishlistItemRepository {
         ? { createdAt: sortDirection, _id: sortDirection }
         : { [options.sortBy]: sortDirection, _id: sortDirection };
 
-    const docs = (await this.collection
+    const docs = await this.collection
       .find(filter)
       .sort(sort)
       .limit(options.limit + 1)
-      .toArray()) as WishlistItemDocument[];
+      .toArray();
 
     const hasMore = docs.length > options.limit;
     const pageDocs = hasMore ? docs.slice(0, -1) : docs;
@@ -96,41 +96,26 @@ export class MongoWishlistItemRepository implements WishlistItemRepository {
       nextCursor: hasMore
         ? {
             createdAt: pageDocs[pageDocs.length - 1]!.createdAt,
-            id: pageDocs[pageDocs.length - 1]!._id.toHexString(),
+            id: pageDocs[pageDocs.length - 1]!._id,
           }
         : null,
     };
   }
 
   async findById(id: string): Promise<WishlistItem | null> {
-    let objectId: ObjectId;
-    try {
-      objectId = new ObjectId(id);
-    } catch {
-      return null;
-    }
-
-    const doc = (await this.collection.findOne({ _id: objectId })) as WishlistItemDocument | null;
+    const doc = await this.collection.findOne({ _id: id });
     return doc ? toWishlistItem(doc) : null;
   }
 
   async update(id: string, item: WishlistItem): Promise<WishlistItem> {
-    const objectId = new ObjectId(id);
     const { id: _itemId, ...itemWithoutId } = item;
     void _itemId;
-    await this.collection.replaceOne({ _id: objectId }, itemWithoutId);
+    await this.collection.replaceOne({ _id: id }, itemWithoutId);
     return item;
   }
 
   async delete(id: string): Promise<void> {
-    let objectId: ObjectId;
-    try {
-      objectId = new ObjectId(id);
-    } catch {
-      return;
-    }
-
-    await this.collection.deleteOne({ _id: objectId });
+    await this.collection.deleteOne({ _id: id });
   }
 
   async deleteByUserId(userId: string): Promise<void> {
