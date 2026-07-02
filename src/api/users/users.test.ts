@@ -18,6 +18,7 @@ import { generateAccessToken } from '../../shared/tokens/token-service.js';
 class FakeStorageService implements StorageService {
   uploadedObjects: Array<{ key: string; contentType: string }> = [];
   deletedKeys: string[] = [];
+  movedObjects: Array<{ sourceKey: string; destinationKey: string }> = [];
 
   async uploadObject(key: string, _buffer: Buffer, contentType: string): Promise<UploadedObject> {
     this.uploadedObjects.push({ key, contentType });
@@ -33,6 +34,14 @@ class FakeStorageService implements StorageService {
 
   async deleteObjects(keys: string[]): Promise<void> {
     this.deletedKeys.push(...keys);
+  }
+
+  async moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject> {
+    this.movedObjects.push({ sourceKey, destinationKey });
+    return {
+      key: destinationKey,
+      url: `https://example.com/${destinationKey}`,
+    };
   }
 }
 
