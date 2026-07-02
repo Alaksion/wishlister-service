@@ -12,6 +12,7 @@ export interface StorageService {
   deleteObject(key: string): Promise<void>;
   deleteObjects(keys: string[]): Promise<void>;
   moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject>;
+  getObjectUrl(key: string): string;
 }
 
 export class ConsoleStorageService implements StorageService {
@@ -19,7 +20,7 @@ export class ConsoleStorageService implements StorageService {
     console.log(`Uploading storage object: ${key} (${contentType})`);
     return {
       key,
-      url: `https://example.com/${key}`,
+      url: this.getObjectUrl(key),
     };
   }
 
@@ -37,8 +38,12 @@ export class ConsoleStorageService implements StorageService {
     console.log(`Moving storage object: ${sourceKey} -> ${destinationKey}`);
     return {
       key: destinationKey,
-      url: `https://example.com/${destinationKey}`,
+      url: this.getObjectUrl(destinationKey),
     };
+  }
+
+  getObjectUrl(key: string): string {
+    return `https://example.com/${key}`;
   }
 }
 

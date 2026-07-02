@@ -64,6 +64,14 @@ describe('S3StorageService', () => {
     });
   });
 
+  describe('getObjectUrl', () => {
+    it('returns the public URL for a key', () => {
+      expect(service.getObjectUrl('users/1/item/photo.png')).toBe(
+        'https://cdn.example.com/users/1/item/photo.png'
+      );
+    });
+  });
+
   describe('deleteObject', () => {
     it('deletes a single object', async () => {
       mockClient.send.mockResolvedValueOnce({});

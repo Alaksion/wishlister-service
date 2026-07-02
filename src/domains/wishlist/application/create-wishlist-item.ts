@@ -36,6 +36,12 @@ export interface CreateWishlistItemUseCaseResult {
   updatedAt: Date;
 }
 
+interface StagedImage {
+  stagingKey: string;
+  finalKey: string;
+  originalName: string;
+}
+
 export class CreateWishlistItemUseCase {
   constructor(
     private readonly wishlistItemRepository: WishlistItemRepository,
@@ -53,28 +59,48 @@ export class CreateWishlistItemUseCase {
       throw new BadRequestError(`Maximum ${MAX_IMAGES} images allowed`);
     }
 
-    const processedImages: Image[] = [];
+    // The use case generates a dedicated item id for S3 keys before repository
+    // insertion so the staging upload and the final record can share the same
+    // key shape: {userId}/{itemId}/{randomName}. This is separate from the
+    // repository-generated database id to avoid coupling the application layer
+    // to MongoDB's ObjectId generation.
+    const s3ItemId = crypto.randomUUID();
+    const stagedImages: StagedImage[] = [];
 
     for (const image of images) {
       this.validateImage(image);
-      const processedBuffer = await this.compressImage(image.buffer, image.mimetype);
-      const s3Key = this.generateS3Key(userId, image.originalname);
-      const uploaded = await this.storageService.uploadObject(
-        s3Key,
-        processedBuffer,
-        image.mimetype
-      );
+      const compressedBuffer = await this.compressImage(image.buffer, image.mimetype);
+      const { stagingKey, finalKey } = this.generateImageKeys(userId, s3ItemId, image.originalname);
 
-      processedImages.push({
-        s3Key: uploaded.key,
-        url: uploaded.url,
+      await this.storageService.uploadObject(stagingKey, compressedBuffer, image.mimetype);
+
+      stagedImages.push({
+        stagingKey,
+        finalKey,
         originalName: image.originalname,
-        uploadedAt: new Date(),
       });
     }
 
+    const processedImages: Image[] = stagedImages.map((stagedImage) => ({
+      s3Key: stagedImage.finalKey,
+      url: this.storageService.getObjectUrl(stagedImage.finalKey),
+      originalName: stagedImage.originalName,
+      uploadedAt: new Date(),
+    }));
+
     const itemToCreate = createWishlistItem(validated, userId, processedImages);
     const createdItem = await this.wishlistItemRepository.create(itemToCreate);
+
+    for (const stagedImage of stagedImages) {
+      try {
+        await this.storageService.moveObject(stagedImage.stagingKey, stagedImage.finalKey);
+      } catch (error) {
+        console.error(
+          `Failed to move staged object ${stagedImage.stagingKey} to ${stagedImage.finalKey} for item ${createdItem.id}:`,
+          error
+        );
+      }
+    }
 
     return createdItem;
   }
@@ -98,7 +124,7 @@ export class CreateWishlistItemUseCase {
       case 'image/jpeg':
         return sharpInstance.jpeg({ quality: 85, progressive: true }).toBuffer();
       case 'image/png':
-        return sharpInstance.png({ quality: 85, compressionLevel: 8 }).toBuffer();
+        return sharpInstance.png({ quality: 85, palette: true, compressionLevel: 8 }).toBuffer();
       case 'image/webp':
         return sharpInstance.webp({ quality: 85 }).toBuffer();
       default:
@@ -106,9 +132,15 @@ export class CreateWishlistItemUseCase {
     }
   }
 
-  private generateS3Key(userId: string, originalName: string): string {
+  private generateImageKeys(
+    userId: string,
+    itemId: string,
+    originalName: string
+  ): { stagingKey: string; finalKey: string } {
     const extension = originalName.split('.').pop() ?? 'bin';
-    const randomId = crypto.randomBytes(16).toString('hex');
-    return `users/${userId}/images/${randomId}.${extension}`;
+    const randomName = `${crypto.randomUUID()}.${extension}`;
+    const stagingKey = `staging/${userId}/${itemId}/${randomName}`;
+    const finalKey = `${userId}/${itemId}/${randomName}`;
+    return { stagingKey, finalKey };
   }
 }

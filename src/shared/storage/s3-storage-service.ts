@@ -45,7 +45,7 @@ export class S3StorageService implements StorageService {
 
     return {
       key,
-      url: this.buildPublicUrl(key),
+      url: this.getObjectUrl(key),
     };
   }
 
@@ -88,8 +88,12 @@ export class S3StorageService implements StorageService {
 
     return {
       key: destinationKey,
-      url: this.buildPublicUrl(destinationKey),
+      url: this.getObjectUrl(destinationKey),
     };
+  }
+
+  getObjectUrl(key: string): string {
+    return `${this.publicUrlPrefix}${key}`;
   }
 
   async listKeys(prefix: string): Promise<ListedObject[]> {
@@ -115,10 +119,6 @@ export class S3StorageService implements StorageService {
     } while (continuationToken);
 
     return keys;
-  }
-
-  private buildPublicUrl(key: string): string {
-    return `${this.publicUrlPrefix}${key}`;
   }
 }
 
