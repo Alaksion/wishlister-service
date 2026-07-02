@@ -8,46 +8,12 @@ import { DeactivateUserUseCase } from '../../domains/user/application/deactivate
 import { LogoutUseCase } from '../../domains/user/application/logout.js';
 import { LogoutAllUseCase } from '../../domains/user/application/logout-all.js';
 import { RefreshUseCase } from '../../domains/user/application/refresh.js';
-import { InMemoryUserRepository } from '../../domains/user/infrastructure/user.repository.in-memory.js';
-import { InMemoryRefreshTokenRepository } from '../../domains/refresh-token/infrastructure/refresh-token.repository.in-memory.js';
-import { InMemoryWishlistItemRepository } from '../../domains/wishlist/infrastructure/wishlist-item.repository.in-memory.js';
+import { InMemoryUserRepository } from '../../test/fakes/user.repository.in-memory.js';
+import { InMemoryRefreshTokenRepository } from '../../test/fakes/refresh-token.repository.in-memory.js';
+import { InMemoryWishlistItemRepository } from '../../test/fakes/wishlist-item.repository.in-memory.js';
 import { createAuthMiddleware } from '../../shared/middleware/auth-middleware.js';
-import type { StorageService, UploadedObject } from '../../shared/storage/storage-service.js';
+import { FakeStorageService } from '../../test/fakes/fake-storage-service.js';
 import { generateAccessToken } from '../../shared/tokens/token-service.js';
-
-class FakeStorageService implements StorageService {
-  uploadedObjects: Array<{ key: string; contentType: string }> = [];
-  deletedKeys: string[] = [];
-  movedObjects: Array<{ sourceKey: string; destinationKey: string }> = [];
-
-  async uploadObject(key: string, _buffer: Buffer, contentType: string): Promise<UploadedObject> {
-    this.uploadedObjects.push({ key, contentType });
-    return {
-      key,
-      url: `https://example.com/${key}`,
-    };
-  }
-
-  async deleteObject(key: string): Promise<void> {
-    this.deletedKeys.push(key);
-  }
-
-  async deleteObjects(keys: string[]): Promise<void> {
-    this.deletedKeys.push(...keys);
-  }
-
-  async moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject> {
-    this.movedObjects.push({ sourceKey, destinationKey });
-    return {
-      key: destinationKey,
-      url: `https://example.com/${destinationKey}`,
-    };
-  }
-
-  getObjectUrl(key: string): string {
-    return `https://example.com/${key}`;
-  }
-}
 
 describe('DELETE /users/me', () => {
   let app: Express;

@@ -1,10 +1,10 @@
 import { ObjectId } from 'mongodb';
-import type { WishlistItem } from '../domain/wishlist-item.js';
+import type { WishlistItem } from '../../domains/wishlist/domain/wishlist-item.js';
 import type {
   ListItemsOptions,
   PaginatedWishlistItems,
   WishlistItemRepository,
-} from '../application/wishlist-item.repository.js';
+} from '../../domains/wishlist/application/wishlist-item.repository.js';
 
 export class InMemoryWishlistItemRepository implements WishlistItemRepository {
   private items: WishlistItem[] = [];

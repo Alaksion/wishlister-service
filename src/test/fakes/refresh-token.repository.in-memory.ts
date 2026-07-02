@@ -1,9 +1,9 @@
-import { compareRefreshTokenHash } from '../../../shared/tokens/token-service.js';
+import { compareRefreshTokenHash } from '../../shared/tokens/token-service.js';
 import { ObjectId } from 'mongodb';
 import type {
   RefreshToken,
   RefreshTokenRepository,
-} from '../application/refresh-token.repository.js';
+} from '../../domains/refresh-token/application/refresh-token.repository.js';
 
 export class InMemoryRefreshTokenRepository implements RefreshTokenRepository {
   private refreshTokens: RefreshToken[] = [];

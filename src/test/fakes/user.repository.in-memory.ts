@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
-import type { UserRepository } from '../application/user.repository.js';
-import type { User } from '../domain/user.js';
+import type { UserRepository } from '../../domains/user/application/user.repository.js';
+import type { User } from '../../domains/user/domain/user.js';
 
 export class InMemoryUserRepository implements UserRepository {
   private users: User[] = [];

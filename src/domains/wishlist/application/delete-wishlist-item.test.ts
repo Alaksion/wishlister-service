@@ -1,47 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DeleteWishlistItemUseCase } from './delete-wishlist-item.js';
-import { InMemoryWishlistItemRepository } from '../infrastructure/wishlist-item.repository.in-memory.js';
-import type { StorageService, UploadedObject } from '../../../shared/storage/storage-service.js';
+import { InMemoryWishlistItemRepository } from '../../../test/fakes/wishlist-item.repository.in-memory.js';
+import { FakeStorageService } from '../../../test/fakes/fake-storage-service.js';
 import type { WishlistItem } from '../domain/wishlist-item.js';
 import { NotFoundError } from '../../../shared/errors/app-error.js';
-
-class FakeStorageService implements StorageService {
-  uploadedObjects: Array<{ key: string; contentType: string }> = [];
-  deletedKeys: string[] = [];
-  movedObjects: Array<{ sourceKey: string; destinationKey: string }> = [];
-  deleteObjectsFailure: Error | null = null;
-
-  async uploadObject(key: string, buffer: Buffer, contentType: string): Promise<UploadedObject> {
-    this.uploadedObjects.push({ key, contentType });
-    return {
-      key,
-      url: `https://example.com/${key}`,
-    };
-  }
-
-  async deleteObject(key: string): Promise<void> {
-    this.deletedKeys.push(key);
-  }
-
-  async deleteObjects(keys: string[]): Promise<void> {
-    if (this.deleteObjectsFailure !== null) {
-      throw this.deleteObjectsFailure;
-    }
-    this.deletedKeys.push(...keys);
-  }
-
-  async moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject> {
-    this.movedObjects.push({ sourceKey, destinationKey });
-    return {
-      key: destinationKey,
-      url: `https://example.com/${destinationKey}`,
-    };
-  }
-
-  getObjectUrl(key: string): string {
-    return `https://example.com/${key}`;
-  }
-}
 
 function createItem(overrides: Partial<WishlistItem> = {}): WishlistItem {
   const now = new Date();
