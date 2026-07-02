@@ -70,12 +70,14 @@ export const updateWishlistItemSchema = z.object({
 export type UpdateWishlistItemInput = z.infer<typeof updateWishlistItemSchema>;
 
 export function createWishlistItem(
+  id: string,
   input: CreateWishlistItemInput,
   userId: string,
   images: Image[]
-): Omit<WishlistItem, 'id'> {
+): WishlistItem {
   const now = new Date();
-  const item: Omit<WishlistItem, 'id'> = {
+  const item: WishlistItem = {
+    id,
     userId,
     title: input.title.trim(),
     currency: input.currency.toUpperCase(),

@@ -40,12 +40,10 @@ export class MongoWishlistItemRepository implements WishlistItemRepository {
     return getDatabase().collection<Omit<WishlistItem, 'id'>>('wishlistItems');
   }
 
-  async create(item: Omit<WishlistItem, 'id'>): Promise<WishlistItem> {
-    const result = await this.collection.insertOne(item);
-    return {
-      ...item,
-      id: result.insertedId.toHexString(),
-    };
+  async create(item: WishlistItem): Promise<WishlistItem> {
+    const { id, ...documentWithoutId } = item;
+    await this.collection.insertOne({ ...documentWithoutId, _id: new ObjectId(id) });
+    return item;
   }
 
   async findByUserId(userId: string): Promise<WishlistItem[]> {
