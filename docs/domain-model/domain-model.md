@@ -51,7 +51,7 @@ Backend service for managing user accounts and private wishlisted items. Built w
   3. Persist the wishlist item record with the final `Image` metadata (`s3Key` = `{userId}/{itemId}/{randomName}`).
   4. On successful persistence, move the object from staging to the final key.
   5. If persistence fails, the staging object remains and is cleaned up by a later background job.
-  6. If the move step fails, the record falls back to the staging `s3Key` and `url` so the stored reference remains valid; a later retry or cleanup job can reconcile.
+  6. If the move step fails, the record still references the final key; a later retry or cleanup job must reconcile the staging object.
 - Both `s3Key` and public serving `url` are stored on the record; `s3Key` enables deletion.
 - The final S3 object key structure is `{userId}/{itemId}/{randomName}`.
 - The S3 bucket is public-read; public `url` points directly to the object.

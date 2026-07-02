@@ -54,7 +54,7 @@ Use a two-phase upload flow with a staging prefix and a later cleanup job.
 | Validation/compression | Return 400, no S3 or DB side effects. |
 | Staging upload | Return 500, no DB record. |
 | DB persistence | Return 500, staging object remains for cleanup job. |
-| Move to final key | DB record falls back to the staging `s3Key` and `url` so the reference remains valid. A later retry or cleanup job must reconcile. |
+| Move to final key | DB record exists with the final `s3Key` but the object remains in staging. A later retry or cleanup job must reconcile. |
 | Item deletion | Hard-delete the record; attempt to delete all S3 objects. Log failures for later cleanup. |
 
 ## Rationale
