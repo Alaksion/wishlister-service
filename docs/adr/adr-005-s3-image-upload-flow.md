@@ -68,5 +68,5 @@ Use a two-phase upload flow with a staging prefix and a later cleanup job.
 
 - Requires `StorageService` to support staging upload, object move, and deletion.
 - A background cleanup job for `staging/` objects must be implemented later.
-- If the move step fails, the record may reference a staging key temporarily.
+- If the move step fails, the record references the final key but the object remains in staging; a retry or cleanup job must reconcile.
 - Server CPU is spent on `sharp` compression; upload size and concurrency should be monitored.
