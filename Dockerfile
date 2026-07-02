@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json ./
+RUN npm install
 
 COPY . .
 RUN npm run build
@@ -30,8 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY package.json ./
+RUN npm install --omit=dev
 
 COPY --from=builder /app/dist ./dist
 
