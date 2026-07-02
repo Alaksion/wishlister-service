@@ -1,3 +1,7 @@
+import { config } from '../config/config.js';
+import { S3StorageService, buildS3ClientConfig } from './s3-storage-service.js';
+import { S3Client } from '@aws-sdk/client-s3';
+
 export interface UploadedObject {
   key: string;
   url: string;
@@ -7,6 +11,7 @@ export interface StorageService {
   uploadObject(key: string, buffer: Buffer, contentType: string): Promise<UploadedObject>;
   deleteObject(key: string): Promise<void>;
   deleteObjects(keys: string[]): Promise<void>;
+  moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject>;
 }
 
 export class ConsoleStorageService implements StorageService {
@@ -27,8 +32,23 @@ export class ConsoleStorageService implements StorageService {
       await this.deleteObject(key);
     }
   }
+
+  async moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject> {
+    console.log(`Moving storage object: ${sourceKey} -> ${destinationKey}`);
+    return {
+      key: destinationKey,
+      url: `https://example.com/${destinationKey}`,
+    };
+  }
 }
 
 export function createStorageService(): StorageService {
+  if (
+    config.AWS_S3_BUCKET_NAME !== undefined &&
+    config.AWS_ACCESS_KEY_ID !== undefined &&
+    config.AWS_SECRET_ACCESS_KEY !== undefined
+  ) {
+    return new S3StorageService(new S3Client(buildS3ClientConfig()));
+  }
   return new ConsoleStorageService();
 }
