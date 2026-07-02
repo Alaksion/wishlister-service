@@ -10,16 +10,24 @@ import {
 import type { StorageService, UploadedObject } from './storage-service.js';
 import { config } from '../config/config.js';
 
+export interface ListedObject {
+  key: string;
+  lastModified: Date;
+}
+
 export class S3StorageService implements StorageService {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly publicUrlPrefix: string;
 
   constructor(
-    client: S3Client = new S3Client(buildS3ClientConfig()),
-    bucket: string = config.AWS_S3_BUCKET_NAME,
+    client: S3Client,
+    bucket: string = config.AWS_S3_BUCKET_NAME ?? '',
     publicUrlPrefix: string = config.S3_PUBLIC_URL_PREFIX ?? buildDefaultPublicUrlPrefix()
   ) {
+    if (bucket === '') {
+      throw new Error('S3StorageService requires a bucket name');
+    }
     this.client = client;
     this.bucket = bucket;
     this.publicUrlPrefix = publicUrlPrefix.endsWith('/') ? publicUrlPrefix : `${publicUrlPrefix}/`;
@@ -84,8 +92,8 @@ export class S3StorageService implements StorageService {
     };
   }
 
-  async listKeys(prefix: string): Promise<Array<{ key: string; lastModified: Date }>> {
-    const keys: Array<{ key: string; lastModified: Date }> = [];
+  async listKeys(prefix: string): Promise<ListedObject[]> {
+    const keys: ListedObject[] = [];
     let continuationToken: string | undefined;
 
     do {
@@ -115,16 +123,26 @@ export class S3StorageService implements StorageService {
 }
 
 function buildDefaultPublicUrlPrefix(): string {
-  const { AWS_S3_BUCKET_NAME: bucket, AWS_REGION: region } = config;
-  return `https://${bucket}.s3.${region}.amazonaws.com/`;
+  const bucket = config.AWS_S3_BUCKET_NAME;
+  if (bucket === undefined) {
+    throw new Error('Cannot build default S3 public URL prefix without a bucket name');
+  }
+  return `https://${bucket}.s3.${config.AWS_REGION}.amazonaws.com/`;
 }
 
-function buildS3ClientConfig(): S3ClientConfig {
+export function buildS3ClientConfig(): S3ClientConfig {
+  const accessKeyId = config.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = config.AWS_SECRET_ACCESS_KEY;
+
+  if (accessKeyId === undefined || secretAccessKey === undefined) {
+    throw new Error('S3 client configuration requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
+  }
+
   const clientConfig: S3ClientConfig = {
     region: config.AWS_REGION,
     credentials: {
-      accessKeyId: config.AWS_ACCESS_KEY_ID,
-      secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+      accessKeyId,
+      secretAccessKey,
     },
   };
 
@@ -134,8 +152,4 @@ function buildS3ClientConfig(): S3ClientConfig {
   }
 
   return clientConfig;
-}
-
-export function createS3StorageService(): S3StorageService {
-  return new S3StorageService();
 }

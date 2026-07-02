@@ -1,5 +1,6 @@
 import { config } from '../config/config.js';
-import { S3StorageService } from './s3-storage-service.js';
+import { S3StorageService, buildS3ClientConfig } from './s3-storage-service.js';
+import { S3Client } from '@aws-sdk/client-s3';
 
 export interface UploadedObject {
   key: string;
@@ -42,8 +43,12 @@ export class ConsoleStorageService implements StorageService {
 }
 
 export function createStorageService(): StorageService {
-  if (config.NODE_ENV === 'production' || config.S3_ENDPOINT !== undefined) {
-    return new S3StorageService();
+  if (
+    config.AWS_S3_BUCKET_NAME !== undefined &&
+    config.AWS_ACCESS_KEY_ID !== undefined &&
+    config.AWS_SECRET_ACCESS_KEY !== undefined
+  ) {
+    return new S3StorageService(new S3Client(buildS3ClientConfig()));
   }
   return new ConsoleStorageService();
 }

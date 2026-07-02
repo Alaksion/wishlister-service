@@ -8,9 +8,9 @@ const configSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1).default('test-access-secret'),
   JWT_REFRESH_SECRET: z.string().min(1).default('test-refresh-secret'),
   AWS_REGION: z.string().min(1).default('us-east-1'),
-  AWS_S3_BUCKET_NAME: z.string().min(1).default('wishlister-test-bucket'),
-  AWS_ACCESS_KEY_ID: z.string().min(1).default('test-access-key'),
-  AWS_SECRET_ACCESS_KEY: z.string().min(1).default('test-secret-key'),
+  AWS_S3_BUCKET_NAME: z.string().min(1).optional(),
+  AWS_ACCESS_KEY_ID: z.string().min(1).optional(),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   S3_PUBLIC_URL_PREFIX: z.string().optional(),
   S3_ENDPOINT: z.string().optional(),
 });
