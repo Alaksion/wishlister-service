@@ -1,57 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateWishlistItemUseCase, type ImageFile } from './create-wishlist-item.js';
-import { InMemoryWishlistItemRepository } from '../infrastructure/wishlist-item.repository.in-memory.js';
-import type { StorageService, UploadedObject } from '../../../shared/storage/storage-service.js';
+import { InMemoryWishlistItemRepository } from '../../../test/fakes/wishlist-item.repository.in-memory.js';
+import {
+  FakeStorageService,
+  createFakeImageBuffer,
+} from '../../../test/fakes/fake-storage-service.js';
 import type { WishlistItem } from '../domain/wishlist-item.js';
-
-class FakeStorageService implements StorageService {
-  uploadedObjects: Array<{ key: string; contentType: string }> = [];
-  deletedKeys: string[] = [];
-  movedObjects: Array<{ sourceKey: string; destinationKey: string }> = [];
-  uploadFailures: Map<string, Error> = new Map();
-  moveFailures: Map<string, Error> = new Map();
-
-  async uploadObject(key: string, _buffer: Buffer, contentType: string): Promise<UploadedObject> {
-    if (this.uploadFailures.has(key) || this.uploadFailures.has('match-any')) {
-      throw this.uploadFailures.get(key) ?? this.uploadFailures.get('match-any')!;
-    }
-    this.uploadedObjects.push({ key, contentType });
-    return {
-      key,
-      url: `https://example.com/${key}`,
-    };
-  }
-
-  async deleteObject(key: string): Promise<void> {
-    this.deletedKeys.push(key);
-  }
-
-  async deleteObjects(keys: string[]): Promise<void> {
-    this.deletedKeys.push(...keys);
-  }
-
-  async moveObject(sourceKey: string, destinationKey: string): Promise<UploadedObject> {
-    if (this.moveFailures.has(sourceKey) || this.moveFailures.has('match-any')) {
-      throw this.moveFailures.get(sourceKey) ?? this.moveFailures.get('match-any')!;
-    }
-    this.movedObjects.push({ sourceKey, destinationKey });
-    return {
-      key: destinationKey,
-      url: `https://example.com/${destinationKey}`,
-    };
-  }
-
-  getObjectUrl(key: string): string {
-    return `https://example.com/${key}`;
-  }
-}
-
-function createFakeImageBuffer(): Buffer {
-  return Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    'base64'
-  );
-}
 
 function createImageFile(overrides: Partial<ImageFile> = {}): ImageFile {
   return {
